@@ -1,10 +1,12 @@
 import {
+  applyAcceptedReportToCanonical,
   buildCanonicalPreviewFromAcceptedReport,
   filterStores,
   getDisplayStatus,
   getFeeLabel,
   getReportById,
   getStoreById,
+  transitionReportReviewState,
   shouldShowFeeDetails,
 } from './corkage-repo';
 
@@ -46,5 +48,45 @@ describe('corkage-repo', () => {
     expect(preview?.nextStore.corkageStatus).toBe('available');
     expect(preview?.nextStore.sourceType).toBe('user_report_reviewed');
     expect(preview?.changes.length).toBeGreaterThan(0);
+  });
+
+  it('transitions review state while preserving report content', () => {
+    const report = getReportById('report-followup-001');
+
+    expect(report).toBeDefined();
+
+    const nextReport = transitionReportReviewState(report!, 'accepted', {
+      reviewNote: '운영자 확인 완료',
+      reviewedAt: '2026-05-18',
+    });
+
+    expect(nextReport.reportId).toBe(report?.reportId);
+    expect(nextReport.reviewState).toBe('accepted');
+    expect(nextReport.reviewNote).toBe('운영자 확인 완료');
+    expect(nextReport.reviewedAt).toBe('2026-05-18');
+    expect(nextReport.memo).toBe(report?.memo);
+  });
+
+  it('applies an accepted report to canonical store state', () => {
+    const report = getReportById('report-accepted-001');
+
+    expect(report).toBeDefined();
+
+    const nextStore = applyAcceptedReportToCanonical(report!);
+
+    expect(nextStore).not.toBeNull();
+    expect(nextStore?.placeId).toBe('seasonal-noodle-lab');
+    expect(nextStore?.corkageStatus).toBe('available');
+    expect(nextStore?.corkageFee).toBe(15000);
+    expect(nextStore?.sourceType).toBe('user_report_reviewed');
+    expect(nextStore?.sourceNote).toBe('운영자 유선 확인 후 canonical 반영 가능');
+    expect(nextStore?.verifiedAt).toBe('2026-05-14');
+  });
+
+  it('does not apply non-accepted reports to canonical store state', () => {
+    const report = getReportById('report-followup-001');
+
+    expect(report).toBeDefined();
+    expect(applyAcceptedReportToCanonical(report!)).toBeNull();
   });
 });
