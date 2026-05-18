@@ -1,19 +1,28 @@
-import type { StoreDisplayState } from "@/types/corkage";
+import { getConfidenceText } from '../../lib/repo/corkage-repo';
+import type {
+  ConfidenceLabel,
+  FreshnessState,
+} from '../../lib/types/corkage';
 
-export function TrustBadge({ state }: { state: StoreDisplayState }) {
-  const className = state.statusLabel.includes("가능")
-    ? "badge available"
-    : state.statusLabel.includes("불가")
-      ? "badge unavailable"
-      : state.statusLabel.includes("오래")
-        ? "badge stale"
-        : "badge unknown";
+type TrustBadgeProps = {
+  confidenceLabel: ConfidenceLabel;
+  freshnessState: FreshnessState;
+};
+
+export function TrustBadge({
+  confidenceLabel,
+  freshnessState,
+}: TrustBadgeProps) {
+  const freshnessText =
+    freshnessState === 'fresh' ? '최신 기준 안' : '정보 오래됨';
 
   return (
-    <div className="badge-row">
-      <span className={className}>{state.statusLabel}</span>
-      <span className="badge stale">신뢰도: {state.statusLabel}</span>
-      <span className="muted">{state.note}</span>
+    <div className="trust-badge" aria-label={`신뢰도 ${getConfidenceText(confidenceLabel)}`}>
+      <span>{getConfidenceText(confidenceLabel)}</span>
+      <span className="trust-badge__dot" aria-hidden="true">
+        •
+      </span>
+      <span>{freshnessText}</span>
     </div>
   );
 }

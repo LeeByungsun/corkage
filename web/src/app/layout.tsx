@@ -1,22 +1,27 @@
-import "./globals.css";
-import type { ReactNode } from "react";
+import type { Metadata } from 'next';
+import './globals.css';
 
-export const metadata = {
-  title: "Corkage MVP",
-  description: "정적 seed 데이터 기반 콜키지 식당 리스트/상세/제보",
+export const metadata: Metadata = {
+  title: 'Corkage MVP',
+  description: '정적 seed 데이터 기반 콜키지 식당 웹 MVP',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+type RootLayoutProps = {
+  children: React.ReactNode;
+};
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko">
       <body>
-        <div className="page-shell">
-          <header className="topbar">
-            <h1>콜키지 확인</h1>
+        <div className="shell">
+          <header className="site-header">
+            <a className="brand" href="/">
+              Corkage MVP
+            </a>
             <nav>
-              <a href="/">홈</a>
-              <a href="/store">식당 목록</a>
-              <a href="/report">제보하기</a>
+              <a href="/store">리스트</a>
+              <a href="/report">제보</a>
             </nav>
           </header>
           <main>{children}</main>
