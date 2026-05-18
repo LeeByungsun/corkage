@@ -1,7 +1,9 @@
 import {
+  buildCanonicalPreviewFromAcceptedReport,
   filterStores,
   getDisplayStatus,
   getFeeLabel,
+  getReportById,
   getStoreById,
   shouldShowFeeDetails,
 } from './corkage-repo';
@@ -31,5 +33,18 @@ describe('corkage-repo', () => {
     expect(store).toBeDefined();
     expect(shouldShowFeeDetails(store!)).toBe(false);
     expect(getFeeLabel(store!)).toBeNull();
+  });
+
+  it('builds an accepted report preview for canonical reflection', () => {
+    const report = getReportById('report-accepted-001');
+
+    expect(report).toBeDefined();
+
+    const preview = buildCanonicalPreviewFromAcceptedReport(report!);
+
+    expect(preview).not.toBeNull();
+    expect(preview?.nextStore.corkageStatus).toBe('available');
+    expect(preview?.nextStore.sourceType).toBe('user_report_reviewed');
+    expect(preview?.changes.length).toBeGreaterThan(0);
   });
 });

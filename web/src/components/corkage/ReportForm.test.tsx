@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { ReportForm } from './ReportForm';
 
 describe('ReportForm', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('shows the client-side draft confirmation after submit', () => {
     render(<ReportForm />);
 
@@ -16,8 +20,11 @@ describe('ReportForm', () => {
       screen.getByRole('button', { name: '제보 초안 저장' }),
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('임시 저장 완료');
-    expect(screen.getByText('새 식당 제보 초안을 브라우저에서 확인했습니다.')).toBeInTheDocument();
-    expect(screen.getByText('콜키지 비용 2만원 확인')).toBeInTheDocument();
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent('임시 저장 완료');
+    expect(status).toHaveTextContent('새 식당 제보 초안을 브라우저에서 확인했습니다.');
+    expect(status).toHaveTextContent('콜키지 비용 2만원 확인');
+    expect(screen.getByText('검수 대기')).toBeInTheDocument();
   });
 });

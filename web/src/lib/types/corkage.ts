@@ -15,6 +15,10 @@ export type FeeUnit = 'per_bottle' | 'per_table' | 'free';
 
 export type StoreFilterStatus = 'all' | CorkageStatus | 'stale';
 
+export type ReportType = 'new' | 'status' | 'fee' | 'stale';
+
+export type ReviewState = 'pending' | 'accepted' | 'rejected' | 'needs_follow_up';
+
 export type CorkageStore = {
   placeId: string;
   name: string;
@@ -46,4 +50,32 @@ export type StoreFilterInput = {
   status?: StoreFilterStatus;
   district?: string;
   maxFee?: number;
+};
+
+export type CorkageReport = {
+  reportId: string;
+  placeId?: string;
+  storeName: string;
+  reportType: ReportType;
+  reportedStatus?: CorkageStatus;
+  reportedFee?: number;
+  memo: string;
+  evidenceUrl?: string;
+  submittedAt: string;
+  reviewState: ReviewState;
+  reviewNote?: string;
+  reviewedAt?: string;
+};
+
+export type CanonicalFieldChange = {
+  field: string;
+  before: string;
+  after: string;
+};
+
+export type CanonicalPreview = {
+  placeId: string;
+  storeName: string;
+  nextStore: CorkageStore;
+  changes: CanonicalFieldChange[];
 };

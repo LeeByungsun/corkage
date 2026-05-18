@@ -1,6 +1,10 @@
 import { corkageSeed } from '../data/corkage-seed';
+import { reportSeed } from '../data/report-seed';
 import type {
+  CanonicalFieldChange,
+  CanonicalPreview,
   ConfidenceLabel,
+  CorkageReport,
   CorkageStore,
   FeeUnit,
   StoreFilterInput,
@@ -30,8 +34,16 @@ export function getAllStores(): CorkageStore[] {
   return corkageSeed;
 }
 
+export function getReports(): CorkageReport[] {
+  return reportSeed;
+}
+
 export function getStoreById(placeId: string): CorkageStore | undefined {
   return corkageSeed.find((store) => store.placeId === placeId);
+}
+
+export function getReportById(reportId: string): CorkageReport | undefined {
+  return reportSeed.find((report) => report.reportId === reportId);
 }
 
 export function listDistricts(): string[] {
@@ -154,4 +166,72 @@ export function getStoreCounts() {
     ).length,
     stale: stores.filter((store) => store.freshnessState === 'stale').length,
   };
+}
+
+export function buildCanonicalPreviewFromAcceptedReport(
+  report: CorkageReport,
+): CanonicalPreview | null {
+  if (report.reviewState !== 'accepted' || !report.placeId) {
+    return null;
+  }
+
+  const store = getStoreById(report.placeId);
+
+  if (!store) {
+    return null;
+  }
+
+  const nextStore: CorkageStore = {
+    ...store,
+    corkageStatus: report.reportedStatus ?? store.corkageStatus,
+    corkageFee: report.reportedFee ?? store.corkageFee,
+    freshnessState: 'fresh',
+    confidenceLabel: 'medium',
+    sourceType: 'user_report_reviewed',
+    sourceNote: report.reviewNote ?? '사용자 제보 검수 반영',
+    verifiedAt: report.reviewedAt ?? report.submittedAt,
+  };
+
+  const changes = collectCanonicalChanges(store, nextStore);
+
+  return {
+    placeId: store.placeId,
+    storeName: store.name,
+    nextStore,
+    changes,
+  };
+}
+
+function collectCanonicalChanges(
+  before: CorkageStore,
+  after: CorkageStore,
+): CanonicalFieldChange[] {
+  const fields: Array<[keyof CorkageStore, string]> = [
+    ['corkageStatus', '상태'],
+    ['corkageFee', '비용'],
+    ['freshnessState', '최신성'],
+    ['confidenceLabel', '신뢰도'],
+    ['sourceType', '출처 유형'],
+    ['verifiedAt', '최신 확인일'],
+  ];
+
+  return fields
+    .filter(([field]) => before[field] !== after[field])
+    .map(([field, label]) => ({
+      field: label,
+      before: formatFieldValue(before[field]),
+      after: formatFieldValue(after[field]),
+    }));
+}
+
+function formatFieldValue(value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return '없음';
+  }
+
+  if (typeof value === 'number') {
+    return new Intl.NumberFormat('ko-KR').format(value);
+  }
+
+  return String(value);
 }
