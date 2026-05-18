@@ -1,0 +1,4 @@
+interface:
+  display_name: "Corkage MVP Planning"
+  short_description: "Cut corkage into a small, testable first release"
+  default_prompt: "Use $corkage-mvp-planning to shrink the corkage product into a clear first release."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Corkage Data Policy"
+  short_description: "Define corkage data, trust, and freshness rules"
+  default_prompt: "Use $corkage-data-policy to define or revise corkage data and verification policy."

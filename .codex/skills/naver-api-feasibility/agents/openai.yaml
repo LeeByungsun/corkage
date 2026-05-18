@@ -1,0 +1,4 @@
+interface:
+  display_name: "Naver API Feasibility"
+  short_description: "Check official NAVER API fit for corkage MVP"
+  default_prompt: "Use $naver-api-feasibility to verify which official NAVER APIs fit the current corkage task."

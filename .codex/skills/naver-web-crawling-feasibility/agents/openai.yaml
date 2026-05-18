@@ -1,0 +1,4 @@
+interface:
+  display_name: "Naver Web Crawling Feasibility"
+  short_description: "Judge Naver crawling risk for corkage use"
+  default_prompt: "Use $naver-web-crawling-feasibility to assess whether a Naver crawling approach is acceptable for corkage."

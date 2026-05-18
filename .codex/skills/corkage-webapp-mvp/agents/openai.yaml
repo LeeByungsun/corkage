@@ -1,0 +1,4 @@
+interface:
+  display_name: "Corkage Webapp MVP"
+  short_description: "Plan and build the corkage web MVP lane"
+  default_prompt: "Use $corkage-webapp-mvp to shape or implement the next corkage web MVP step."
