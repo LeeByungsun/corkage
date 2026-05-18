@@ -22,6 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <nav>
               <a href="/store">리스트</a>
               <a href="/report">제보</a>
+              <a href="/review">검수 큐</a>
             </nav>
           </header>
           <main>{children}</main>

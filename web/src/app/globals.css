@@ -192,6 +192,11 @@ main {
   gap: 1rem;
 }
 
+.review-grid {
+  display: grid;
+  gap: 1rem;
+}
+
 .review-panel__section {
   background: var(--surface-strong);
   border: 1px solid var(--border);
@@ -289,6 +294,21 @@ main {
   flex-wrap: wrap;
   gap: 0.5rem;
   color: var(--muted);
+}
+
+.review-card {
+  display: grid;
+  gap: 1rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 16px 50px rgba(31, 26, 22, 0.05);
+}
+
+.review-controls {
+  display: grid;
+  gap: 0.75rem;
 }
 
 .submission-card pre {

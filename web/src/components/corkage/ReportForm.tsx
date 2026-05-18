@@ -5,10 +5,12 @@ import {
   buildCanonicalPreviewFromAcceptedReport,
   getReports,
 } from '../../lib/repo/corkage-repo';
+import {
+  readDraftReports,
+  saveDraftReport,
+} from '../../lib/repo/report-drafts';
 import type { CorkageReport, CorkageStatus, ReportType } from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
-
-const STORAGE_KEY = 'corkage-mvp-report-drafts';
 
 type DraftState = {
   storeName: string;
@@ -20,18 +22,7 @@ export function ReportForm() {
   const [localReports, setLocalReports] = useState<CorkageReport[]>([]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!stored) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(stored) as CorkageReport[];
-      setLocalReports(parsed);
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
+    setLocalReports(readDraftReports());
   }, []);
 
   const seededReports = useMemo(() => getReports(), []);
@@ -62,11 +53,7 @@ export function ReportForm() {
     };
 
     setSubmitted(nextState);
-    setLocalReports((current) => {
-      const nextReports = [nextReport, ...current];
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextReports));
-      return nextReports;
-    });
+    setLocalReports(saveDraftReport(nextReport));
     event.currentTarget.reset();
   }
 

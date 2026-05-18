@@ -65,6 +65,8 @@ export type CorkageReport = {
   reviewState: ReviewState;
   reviewNote?: string;
   reviewedAt?: string;
+  appliedAt?: string;
+  reviewerId?: string;
 };
 
 export type CanonicalFieldChange = {
