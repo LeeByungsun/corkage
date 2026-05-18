@@ -46,6 +46,37 @@ export function getReportById(reportId: string): CorkageReport | undefined {
   return reportSeed.find((report) => report.reportId === reportId);
 }
 
+export function transitionReportReviewState(
+  report: CorkageReport,
+  reviewState: CorkageReport['reviewState'],
+  {
+    reviewNote,
+    reviewedAt,
+  }: {
+    reviewNote?: string;
+    reviewedAt?: string;
+  } = {},
+): CorkageReport {
+  const nextReport: CorkageReport = {
+    ...report,
+    reviewState,
+  };
+
+  if (reviewNote !== undefined) {
+    nextReport.reviewNote = reviewNote.trim() || undefined;
+  }
+
+  if (reviewState === 'pending') {
+    delete nextReport.reviewedAt;
+  } else if (reviewedAt !== undefined) {
+    nextReport.reviewedAt = reviewedAt;
+  } else if (report.reviewedAt) {
+    nextReport.reviewedAt = report.reviewedAt;
+  }
+
+  return nextReport;
+}
+
 export function listDistricts(): string[] {
   return [...new Set(corkageSeed.map((store) => store.district))].sort();
 }
@@ -171,6 +202,31 @@ export function getStoreCounts() {
 export function buildCanonicalPreviewFromAcceptedReport(
   report: CorkageReport,
 ): CanonicalPreview | null {
+  const nextStore = applyAcceptedReportToCanonical(report);
+
+  if (!nextStore) {
+    return null;
+  }
+
+  const store = getStoreById(report.placeId!);
+
+  if (!store) {
+    return null;
+  }
+
+  const changes = collectCanonicalChanges(store, nextStore);
+
+  return {
+    placeId: store.placeId,
+    storeName: store.name,
+    nextStore,
+    changes,
+  };
+}
+
+export function applyAcceptedReportToCanonical(
+  report: CorkageReport,
+): CorkageStore | null {
   if (report.reviewState !== 'accepted' || !report.placeId) {
     return null;
   }
@@ -181,7 +237,7 @@ export function buildCanonicalPreviewFromAcceptedReport(
     return null;
   }
 
-  const nextStore: CorkageStore = {
+  return {
     ...store,
     corkageStatus: report.reportedStatus ?? store.corkageStatus,
     corkageFee: report.reportedFee ?? store.corkageFee,
@@ -190,15 +246,6 @@ export function buildCanonicalPreviewFromAcceptedReport(
     sourceType: 'user_report_reviewed',
     sourceNote: report.reviewNote ?? '사용자 제보 검수 반영',
     verifiedAt: report.reviewedAt ?? report.submittedAt,
-  };
-
-  const changes = collectCanonicalChanges(store, nextStore);
-
-  return {
-    placeId: store.placeId,
-    storeName: store.name,
-    nextStore,
-    changes,
   };
 }
 
