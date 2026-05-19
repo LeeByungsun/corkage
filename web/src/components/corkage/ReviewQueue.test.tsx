@@ -32,6 +32,32 @@ describe('ReviewQueue', () => {
       target: { value: 'accepted' },
     });
 
+    expect(
+      within(draftCard).getByText('canonical 반영 preview'),
+    ).toBeInTheDocument();
+    expect(within(draftCard).getAllByText('반영 가능').length).toBeGreaterThan(0);
+
+    const raw = window.localStorage.getItem('corkage-mvp-canonical-overrides');
+
+    expect(raw).not.toBeNull();
+    expect(raw).toContain('seasonal-noodle-lab');
+  });
+
+  it('persists canonical override when accepted draft is applied', () => {
+    render(<ReviewQueue />);
+
+    const draftCard = getDraftCard();
+
+    fireEvent.change(within(draftCard).getByLabelText('검수 상태'), {
+      target: { value: 'accepted' },
+    });
+
+    fireEvent.click(
+      within(draftCard).getByRole('button', {
+        name: 'accepted canonical 반영 실행',
+      }),
+    );
+
     const raw = window.localStorage.getItem('corkage-mvp-canonical-overrides');
 
     expect(raw).not.toBeNull();
