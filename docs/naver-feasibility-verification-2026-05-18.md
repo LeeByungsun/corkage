@@ -10,6 +10,8 @@
 2. `docs/naver-local-search-checklist.md`
 3. `docs/naver-web-crawling-feasibility.md`
 
+추가로 이번 정리에서는 `2026-04-16` 공지, `2026-06-25 18:00 KST` 종료 시점, `Web Dynamic Map(JS v3) / Static Map / Geocoding / Reverse Geocoding` 종료 범위, `standalone Maps` 대체 경로, 그리고 일부 자동 수집 결과가 `body-unavailable`로 내려오는 경우의 확인 한계를 같이 반영합니다.
+
 ## 검증 범위
 
 - 공식 Local Search API가 실제로 어디까지 반환하는지
@@ -100,6 +102,26 @@
 
 - 네이버 웹 크롤링을 운영 기본 파이프라인으로 두지 말아야 한다는 결론은 더 강해짐
 
+### 5. 2026-04-16 공지와 2026-06-25 18:00 KST 종료 범위
+
+출처:
+
+- 2026-04-16 공지의 worker findings
+- 네이버 지도 Open API 종료 및 이관 공지 계열
+
+재확인 내용:
+
+- 종료 시점은 `2026-06-25 18:00 KST`로 안내됨
+- 종료 범위는 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding`이다
+- 대체 경로는 `standalone Maps` 계열, 즉 네이버 클라우드 플랫폼 Maps/Enterprise API 이관이다
+- 자동 수집 과정에서는 일부 공지 본문이 `body-unavailable`로 내려와, 제목/스니펫/미러 문구를 함께 대조해야 했다
+
+판단:
+
+- 이전부터 문서에 있던 Maps 계열 이관 결론은 유지하되, 이제는 종료 시점과 종료 범위를 더 분명하게 적어야 한다
+- `Web Dynamic Map(JS v3)`는 별도 예외가 아니라 종료 범위 안에 포함해 적는 편이 안전하다
+- `standalone Maps`를 대체 경로로 같이 적어야 이후 벤더 선택 문서와 충돌하지 않는다
+
 ## 라이브 API 검증
 
 검증 스크립트:
@@ -167,6 +189,7 @@ python3 scripts/verify_naver_local_search_live.py
 - 현재 실호출에서도 `start=2` 요청이 `start=1`로 정규화됨
 - 따라서 현재 시점에서는 `실질적으로 5건 단일 페이지형 후보 탐색 API`처럼 다루는 편이 안전함
 - `map.naver.com/robots.txt`는 현재 일반 크롤링에 매우 보수적인 상태임
+- 일부 공지/문서 본문은 자동 수집 시 `body-unavailable`로 내려올 수 있어, 제목과 요약 스니펫을 같이 봐야 함
 
 ## 검증 체크
 
@@ -174,6 +197,7 @@ python3 scripts/verify_naver_local_search_live.py
 - PASS: 공식 약관/FAQ/정책과 현재 저장소의 보수적 제품 판단이 일치함
 - PASS: 라이브 API 호출이 문서화된 핵심 한계(`telephone`, `display`, `start`, `link`)를 재현함
 - PASS: `map.naver.com/robots.txt` 확인 결과 현재 크롤링 친화적 상태가 아님
+- PASS: 2026-04-16 공지와 2026-06-25 18:00 KST 종료 범위가 Maps 계열 종료 문맥과 일치함
 - PASS: `scripts/verify_naver_local_search_live.py`를 통해 같은 검증을 반복 실행할 수 있게 됨
 
 ## 저장소 검증 메모
@@ -204,6 +228,8 @@ python3 scripts/verify_naver_local_search_live.py
 가장 중요한 판단은 아래입니다.
 
 - 네이버 공식 API는 `후보 검색 + 위치 보조` 수준으로 제한
+- `2026-06-25 18:00 KST` 종료 대상에 포함되는 `Web Dynamic Map(JS v3) / Static Map / Geocoding / Reverse Geocoding`은 계속 사용할 전제가 아니라 이관 전제의 기능으로 봐야 함
+- `standalone Maps`(네이버 클라우드 플랫폼 Maps / Enterprise API)가 대체 경로다
 - 콜키지 정보와 공개용 식당 DB는 자체 검증 데이터로 분리
 - 네이버 웹/내부 API 크롤링은 운영 기본 수집 파이프라인으로 채택하지 않음
 - 지도/지오코딩은 종료 공지 이후 standalone Maps 대체 경로를 우선 검토
