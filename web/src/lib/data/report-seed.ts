@@ -3,6 +3,7 @@ import type { CorkageReport } from '../types/corkage';
 export const reportSeed: CorkageReport[] = [
   {
     reportId: 'report-accepted-001',
+    storeMatchType: 'existing',
     placeId: 'seasonal-noodle-lab',
     storeName: '시즈널 누들랩',
     reportType: 'status',
@@ -17,6 +18,7 @@ export const reportSeed: CorkageReport[] = [
   },
   {
     reportId: 'report-followup-001',
+    storeMatchType: 'existing',
     placeId: 'old-cellar-bistro',
     storeName: '올드셀러 비스트로',
     reportType: 'fee',

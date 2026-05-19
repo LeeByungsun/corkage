@@ -7,6 +7,7 @@ import type {
   CorkageReport,
   CorkageStore,
   FeeUnit,
+  ReportStoreMatchType,
   StoreFilterInput,
 } from '../types/corkage';
 
@@ -35,7 +36,7 @@ export function getAllStores(): CorkageStore[] {
 }
 
 export function getReports(): CorkageReport[] {
-  return reportSeed;
+  return reportSeed.map(normalizeReport);
 }
 
 export function getStoreById(placeId: string): CorkageStore | undefined {
@@ -43,7 +44,7 @@ export function getStoreById(placeId: string): CorkageStore | undefined {
 }
 
 export function getReportById(reportId: string): CorkageReport | undefined {
-  return reportSeed.find((report) => report.reportId === reportId);
+  return getReports().find((report) => report.reportId === reportId);
 }
 
 export function transitionReportReviewState(
@@ -57,8 +58,9 @@ export function transitionReportReviewState(
     reviewedAt?: string;
   } = {},
 ): CorkageReport {
+  const currentReport = normalizeReport(report);
   const nextReport: CorkageReport = {
-    ...report,
+    ...currentReport,
     reviewState,
   };
 
@@ -70,11 +72,44 @@ export function transitionReportReviewState(
     delete nextReport.reviewedAt;
   } else if (reviewedAt !== undefined) {
     nextReport.reviewedAt = reviewedAt;
-  } else if (report.reviewedAt) {
-    nextReport.reviewedAt = report.reviewedAt;
+  } else if (currentReport.reviewedAt) {
+    nextReport.reviewedAt = currentReport.reviewedAt;
   }
 
   return nextReport;
+}
+
+export function normalizeReport(report: CorkageReport): CorkageReport {
+  const storeMatchType = getReportStoreMatchType(report);
+
+  return {
+    ...report,
+    storeMatchType,
+    placeId: storeMatchType === 'existing' ? report.placeId : undefined,
+  };
+}
+
+export function getReportStoreMatchType(
+  report: CorkageReport,
+): ReportStoreMatchType {
+  if (report.storeMatchType === 'existing' && report.placeId) {
+    return 'existing';
+  }
+
+  if (report.storeMatchType === 'candidate') {
+    return 'candidate';
+  }
+
+  return report.placeId ? 'existing' : 'candidate';
+}
+
+export function isExistingStoreReport(report: CorkageReport): boolean {
+  const normalizedReport = normalizeReport(report);
+
+  return (
+    normalizedReport.storeMatchType === 'existing' &&
+    Boolean(normalizedReport.placeId)
+  );
 }
 
 export function listDistricts(): string[] {
@@ -250,13 +285,14 @@ export function buildCanonicalPreviewFromAcceptedReport(
   report: CorkageReport,
   stores: CorkageStore[] = getAllStores(),
 ): CanonicalPreview | null {
-  const nextStore = applyAcceptedReportToCanonical(report, stores);
+  const normalizedReport = normalizeReport(report);
+  const nextStore = applyAcceptedReportToCanonical(normalizedReport, stores);
 
   if (!nextStore) {
     return null;
   }
 
-  const store = getStoreByIdFromStores(stores, report.placeId!);
+  const store = getStoreByIdFromStores(stores, normalizedReport.placeId!);
 
   if (!store) {
     return null;
@@ -276,11 +312,16 @@ export function applyAcceptedReportToCanonical(
   report: CorkageReport,
   stores: CorkageStore[] = getAllStores(),
 ): CorkageStore | null {
-  if (report.reviewState !== 'accepted' || !report.placeId) {
+  const normalizedReport = normalizeReport(report);
+
+  if (
+    normalizedReport.reviewState !== 'accepted' ||
+    !isExistingStoreReport(normalizedReport)
+  ) {
     return null;
   }
 
-  const store = getStoreByIdFromStores(stores, report.placeId);
+  const store = getStoreByIdFromStores(stores, normalizedReport.placeId!);
 
   if (!store) {
     return null;
@@ -288,13 +329,13 @@ export function applyAcceptedReportToCanonical(
 
   return {
     ...store,
-    corkageStatus: report.reportedStatus ?? store.corkageStatus,
-    corkageFee: report.reportedFee ?? store.corkageFee,
+    corkageStatus: normalizedReport.reportedStatus ?? store.corkageStatus,
+    corkageFee: normalizedReport.reportedFee ?? store.corkageFee,
     freshnessState: 'fresh',
     confidenceLabel: 'medium',
     sourceType: 'user_report_reviewed',
-    sourceNote: report.reviewNote ?? '사용자 제보 검수 반영',
-    verifiedAt: report.reviewedAt ?? report.submittedAt,
+    sourceNote: normalizedReport.reviewNote ?? '사용자 제보 검수 반영',
+    verifiedAt: normalizedReport.reviewedAt ?? normalizedReport.submittedAt,
   };
 }
 

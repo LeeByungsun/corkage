@@ -19,6 +19,8 @@ export type ReportType = 'new' | 'status' | 'fee' | 'stale';
 
 export type ReviewState = 'pending' | 'accepted' | 'rejected' | 'needs_follow_up';
 
+export type ReportStoreMatchType = 'existing' | 'candidate';
+
 export type CorkageStore = {
   placeId: string;
   name: string;
@@ -54,6 +56,7 @@ export type StoreFilterInput = {
 
 export type CorkageReport = {
   reportId: string;
+  storeMatchType: ReportStoreMatchType;
   placeId?: string;
   storeName: string;
   reportType: ReportType;
