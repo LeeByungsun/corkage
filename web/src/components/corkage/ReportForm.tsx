@@ -9,6 +9,7 @@ import {
   readDraftReports,
   saveDraftReport,
 } from '../../lib/repo/report-drafts';
+import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
 import type { CorkageReport, CorkageStatus, ReportType } from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
 
@@ -20,6 +21,7 @@ type DraftState = {
 export function ReportForm() {
   const [submitted, setSubmitted] = useState<DraftState | null>(null);
   const [localReports, setLocalReports] = useState<CorkageReport[]>([]);
+  const currentStores = useCanonicalStores();
 
   useEffect(() => {
     setLocalReports(readDraftReports());
@@ -27,7 +29,9 @@ export function ReportForm() {
 
   const seededReports = useMemo(() => getReports(), []);
   const acceptedPreviews = seededReports
-    .map((report) => buildCanonicalPreviewFromAcceptedReport(report))
+    .map((report) =>
+      buildCanonicalPreviewFromAcceptedReport(report, currentStores),
+    )
     .filter((preview): preview is NonNullable<typeof preview> => Boolean(preview));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

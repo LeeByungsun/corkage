@@ -12,14 +12,13 @@
 
 현재 저장소는 아래 성격을 가집니다.
 
-- 정책/기획/검증 문서 중심
-- 실행 가능한 웹앱 스캐폴드 없음
-- `package.json` 없음
-- `tsconfig.json` 없음
-- `Next.js` 앱 디렉터리 없음
-- `lint/test/build` 설정 없음
+- 정책/기획/검증 문서가 먼저 정리됨
+- 실행 가능한 Next.js 웹앱이 `web/` 아래에 이미 존재함
+- 홈, 리스트, 상세, 제보, 검수 큐 라우트가 있음
+- `lint / typecheck / test / build`까지 기본 검증 루프가 있음
+- 다만 현재는 `제보 -> 검수 accepted -> canonical 반영`이 화면 전반에 완전히 연결되진 않았음
 
-즉, 아직 구현 단계는 `0 -> 1` 부트스트랩이 필요한 상태입니다.
+즉, 현재 구현 단계는 `0 -> 1 부트스트랩`이 아니라 `로컬 운영 흐름을 실제 화면에 붙이는 단계`입니다.
 
 ## 저장소 구조 결정
 
@@ -188,12 +187,12 @@
 
 바로 다음 구현 액션은 이것입니다.
 
-1. `web/` 부트스트랩 생성
-2. `corkage.ts` 타입 정의
-3. `corkage-seed.ts` seed 데이터 추가
-4. `StoreList`, `StoreCard`, `TrustBadge` 작성
-5. `/store`, `/store/[id]`, `/report` 생성
+1. accepted 검수 결과를 로컬 canonical 상태로 저장
+2. `/store`와 `/store/[id]`가 그 canonical 상태를 실제로 읽도록 연결
+3. 홈 seed 현황 카드도 같은 canonical 기준으로 갱신
+4. `report -> review -> canonical 반영` 흐름을 브라우저 로컬 목업 기준으로 닫기
+5. 그 다음에만 서버 저장, 지도, 외부 API 연결 순서를 다시 연다
 
 ## 최종 판단
 
-`corkage-webapp-mvp`의 시작은 `지도`가 아니라 `정적 seed 기반 리스트/상세/신뢰도 표시 웹앱`에서 출발하는 것이 가장 안전합니다.
+`corkage-webapp-mvp`의 현재 다음 slice는 `지도 추가`가 아니라 `accepted 검수 결과가 실제 canonical 화면 상태에 반영되는 로컬 운영 흐름`을 먼저 완성하는 것입니다.

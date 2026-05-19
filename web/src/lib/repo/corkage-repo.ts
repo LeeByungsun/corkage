@@ -39,7 +39,7 @@ export function getReports(): CorkageReport[] {
 }
 
 export function getStoreById(placeId: string): CorkageStore | undefined {
-  return corkageSeed.find((store) => store.placeId === placeId);
+  return getStoreByIdFromStores(corkageSeed, placeId);
 }
 
 export function getReportById(reportId: string): CorkageReport | undefined {
@@ -78,7 +78,7 @@ export function transitionReportReviewState(
 }
 
 export function listDistricts(): string[] {
-  return [...new Set(corkageSeed.map((store) => store.district))].sort();
+  return listDistrictsFromStores(corkageSeed);
 }
 
 export function filterStores({
@@ -86,7 +86,22 @@ export function filterStores({
   district,
   maxFee,
 }: StoreFilterInput): CorkageStore[] {
-  return corkageSeed.filter((store) => {
+  return filterStoreList(corkageSeed, {
+    status,
+    district,
+    maxFee,
+  });
+}
+
+export function filterStoreList(
+  stores: CorkageStore[],
+  {
+    status = 'all',
+    district,
+    maxFee,
+  }: StoreFilterInput,
+): CorkageStore[] {
+  return stores.filter((store) => {
     if (status === 'stale' && store.freshnessState !== 'stale') {
       return false;
     }
@@ -114,6 +129,36 @@ export function filterStores({
 
     return true;
   });
+}
+
+export function mergeStores(
+  baseStores: CorkageStore[],
+  overrides: CorkageStore[],
+): CorkageStore[] {
+  const overrideMap = new Map(
+    overrides.map((store) => [store.placeId, store] as const),
+  );
+
+  const merged = baseStores.map(
+    (store) => overrideMap.get(store.placeId) ?? store,
+  );
+
+  const extraOverrides = overrides.filter(
+    (store) => !baseStores.some((item) => item.placeId === store.placeId),
+  );
+
+  return [...merged, ...extraOverrides];
+}
+
+export function getStoreByIdFromStores(
+  stores: CorkageStore[],
+  placeId: string,
+): CorkageStore | undefined {
+  return stores.find((store) => store.placeId === placeId);
+}
+
+export function listDistrictsFromStores(stores: CorkageStore[]): string[] {
+  return [...new Set(stores.map((store) => store.district))].sort();
 }
 
 export function getDisplayStatus(store: CorkageStore): string {
@@ -187,8 +232,10 @@ export function getVisibilityNote(store: CorkageStore): string {
 }
 
 export function getStoreCounts() {
-  const stores = getAllStores();
+  return getStoreCountsFromStores(getAllStores());
+}
 
+export function getStoreCountsFromStores(stores: CorkageStore[]) {
   return {
     total: stores.length,
     available: stores.filter(
@@ -201,14 +248,15 @@ export function getStoreCounts() {
 
 export function buildCanonicalPreviewFromAcceptedReport(
   report: CorkageReport,
+  stores: CorkageStore[] = getAllStores(),
 ): CanonicalPreview | null {
-  const nextStore = applyAcceptedReportToCanonical(report);
+  const nextStore = applyAcceptedReportToCanonical(report, stores);
 
   if (!nextStore) {
     return null;
   }
 
-  const store = getStoreById(report.placeId!);
+  const store = getStoreByIdFromStores(stores, report.placeId!);
 
   if (!store) {
     return null;
@@ -226,12 +274,13 @@ export function buildCanonicalPreviewFromAcceptedReport(
 
 export function applyAcceptedReportToCanonical(
   report: CorkageReport,
+  stores: CorkageStore[] = getAllStores(),
 ): CorkageStore | null {
   if (report.reviewState !== 'accepted' || !report.placeId) {
     return null;
   }
 
-  const store = getStoreById(report.placeId);
+  const store = getStoreByIdFromStores(stores, report.placeId);
 
   if (!store) {
     return null;

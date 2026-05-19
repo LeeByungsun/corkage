@@ -2,10 +2,12 @@ import {
   applyAcceptedReportToCanonical,
   buildCanonicalPreviewFromAcceptedReport,
   filterStores,
+  getStoreCountsFromStores,
   getDisplayStatus,
   getFeeLabel,
   getReportById,
   getStoreById,
+  mergeStores,
   transitionReportReviewState,
   shouldShowFeeDetails,
 } from './corkage-repo';
@@ -88,5 +90,27 @@ describe('corkage-repo', () => {
 
     expect(report).toBeDefined();
     expect(applyAcceptedReportToCanonical(report!)).toBeNull();
+  });
+
+  it('merges accepted canonical overrides into user-facing counts', () => {
+    const report = getReportById('report-accepted-001');
+
+    expect(report).toBeDefined();
+
+    const nextStore = applyAcceptedReportToCanonical(report!);
+    const mergedStores = mergeStores(
+      [
+        getStoreById('seoul-vin-table')!,
+        getStoreById('old-cellar-bistro')!,
+        getStoreById('seasonal-noodle-lab')!,
+      ],
+      nextStore ? [nextStore] : [],
+    );
+
+    const counts = getStoreCountsFromStores(mergedStores);
+
+    expect(counts.total).toBe(3);
+    expect(counts.available).toBe(2);
+    expect(counts.stale).toBe(1);
   });
 });

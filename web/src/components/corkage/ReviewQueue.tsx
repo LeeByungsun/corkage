@@ -4,12 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   buildCanonicalPreviewFromAcceptedReport,
   getReports,
+  getAllStores,
+  mergeStores,
 } from '../../lib/repo/corkage-repo';
+import {
+  readCanonicalOverrides,
+  saveCanonicalOverride,
+} from '../../lib/repo/canonical-overrides';
 import {
   readDraftReports,
   updateDraftReportReview,
 } from '../../lib/repo/report-drafts';
-import type { CorkageReport, ReviewState } from '../../lib/types/corkage';
+import type {
+  CorkageReport,
+  CorkageStore,
+  ReviewState,
+} from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
 
 const REVIEW_STATE_OPTIONS: Array<{ value: ReviewState; label: string }> = [
@@ -21,13 +31,18 @@ const REVIEW_STATE_OPTIONS: Array<{ value: ReviewState; label: string }> = [
 
 export function ReviewQueue() {
   const [draftReports, setDraftReports] = useState<CorkageReport[]>([]);
+  const [canonicalOverrides, setCanonicalOverrides] = useState<CorkageStore[]>(
+    [],
+  );
 
   useEffect(() => {
     setDraftReports(readDraftReports());
+    setCanonicalOverrides(readCanonicalOverrides());
   }, []);
 
   const seededReports = useMemo(() => getReports(), []);
   const reports = [...draftReports, ...seededReports];
+  const currentStores = mergeStores(getAllStores(), canonicalOverrides);
 
   function handleReviewChange(report: CorkageReport, reviewState: ReviewState) {
     if (!isDraftReport(report.reportId)) {
@@ -60,6 +75,8 @@ export function ReviewQueue() {
       return;
     }
 
+    const nextStore = applyCanonicalOverride(report);
+
     setDraftReports(
       updateDraftReportReview(report.reportId, {
         reviewState: 'accepted',
@@ -67,6 +84,15 @@ export function ReviewQueue() {
         appliedAt: new Date().toISOString().slice(0, 10),
       }),
     );
+
+    if (nextStore) {
+      setCanonicalOverrides(saveCanonicalOverride(nextStore));
+    }
+  }
+
+  function applyCanonicalOverride(report: CorkageReport) {
+    return buildCanonicalPreviewFromAcceptedReport(report, currentStores)
+      ?.nextStore;
   }
 
   return (
@@ -84,7 +110,7 @@ export function ReviewQueue() {
         {reports.map((report) => {
           const preview =
             report.reviewState === 'accepted'
-              ? buildCanonicalPreviewFromAcceptedReport(report)
+              ? buildCanonicalPreviewFromAcceptedReport(report, currentStores)
               : null;
 
           const draft = isDraftReport(report.reportId);
