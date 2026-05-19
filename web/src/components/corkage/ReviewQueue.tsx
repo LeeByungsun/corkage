@@ -5,7 +5,7 @@ import {
   applyAcceptedReportToCanonical,
   buildCanonicalPreviewFromAcceptedReport,
   getAllStores,
-  isExistingStoreReport,
+  getReports,
   mergeStores,
   transitionReportReviewState,
 } from '../../lib/repo/corkage-repo';
@@ -51,21 +51,23 @@ export function ReviewQueue() {
       return;
     }
 
-    const reviewedAt =
-      reviewState === 'pending'
-        ? undefined
-        : new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
     const nextReport = transitionReportReviewState(report, reviewState, {
-      reviewedAt,
+      reviewNote: report.reviewNote,
+      reviewedAt:
+        reviewState === 'pending' ? undefined : report.reviewedAt ?? today,
     });
     const nextStore =
-      reviewState === 'accepted' ? applyCanonicalOverride(nextReport) : null;
+      nextReport.reviewState === 'accepted'
+        ? applyCanonicalOverride(nextReport)
+        : null;
 
     setDraftReports(
       updateDraftReportReview(report.reportId, {
-        reviewState,
+        reviewState: nextReport.reviewState,
+        reviewNote: nextReport.reviewNote,
         reviewedAt: nextReport.reviewedAt,
-        appliedAt: nextStore ? nextReport.reviewedAt : undefined,
+        appliedAt: nextStore ? today : report.appliedAt,
       }),
     );
 
@@ -98,31 +100,22 @@ export function ReviewQueue() {
     }
   }
 
-  function handleApplyCanonical(report: CorkageReport) {
-    if (!isDraftReport(report.reportId) || !isExistingStoreReport(report)) {
-      return;
+  function getComparableStores(report: CorkageReport) {
+    if (!report.placeId) {
+      return currentStores;
     }
 
-    const reviewedAt = report.reviewedAt ?? new Date().toISOString().slice(0, 10);
-    const nextReport =
-      report.reviewState === 'accepted'
-        ? report
-        : transitionReportReviewState(report, 'accepted', {
-            reviewedAt,
-          });
-    const nextStore = applyCanonicalOverride(nextReport);
-
-    setDraftReports(
-      updateDraftReportReview(report.reportId, {
-        reviewState: 'accepted',
-        reviewedAt: nextReport.reviewedAt,
-        appliedAt: nextStore ? nextReport.reviewedAt : undefined,
-      }),
+    return mergeStores(
+      getAllStores(),
+      canonicalOverrides.filter((store) => store.placeId !== report.placeId),
     );
   }
 
   function applyCanonicalOverride(report: CorkageReport) {
-    return applyAcceptedReportToCanonical(report, currentStores);
+    return buildCanonicalPreviewFromAcceptedReport(
+      report,
+      getComparableStores(report),
+    )?.nextStore;
   }
 
   return (
@@ -207,14 +200,11 @@ export function ReviewQueue() {
                   />
                 </label>
 
-                <button
-                  className="primary-button"
-                  disabled={!draft || !isExistingStoreReport(report)}
-                  type="button"
-                  onClick={() => handleApplyCanonical(report)}
-                >
-                  accepted canonical 반영 실행
-                </button>
+                <p className="muted">
+                  {report.placeId
+                    ? '기존 식당 제보는 accepted와 동시에 canonical override가 저장됩니다.'
+                    : '신규 식당 제보는 candidate로 유지되고 canonical을 덮지 않습니다.'}
+                </p>
               </div>
 
               {!isExistingStoreReport(report) ? (
