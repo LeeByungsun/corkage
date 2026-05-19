@@ -16,13 +16,13 @@
 
 - 2026-04-16 공지 기준으로 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding` 계열은 `2026-06-25 18:00 KST` 종료 시점을 반영해 봐야 합니다.
 - 따라서 지도/지오코딩 쪽은 `NAVER Cloud Platform Maps`의 standalone 경로와 `Services > Application Services > Maps` 콘솔 경로를 대체안으로 두는 편이 안전합니다.
-- 자동 수집 기준으로는 2026-04-16 공지의 본문 body를 직접 읽지 못했습니다. 종료 시점과 범위는 `공지 메타데이터 + 현재 공식 Maps 문서 + worker findings`를 합쳐 이 문서 전제에 반영합니다.
+- 2026-04-16 공지 본문은 ncloud notice HTML source(`__NUXT_DATA__`)에서 확인했습니다. 다만 동적 렌더링 화면만 보면 본문이 바로 드러나지 않아 source inspection이 필요했습니다.
 - 네이버 API 서비스 이용약관은 `2025년 5월 27일 개정` 기준으로, 네이버 지역정보를 수집해 `별도 데이터베이스로 관리하며 이용하는 행위`를 금지하고 있습니다.
 - 같은 약관은 회사의 사전 승인 없이 `스크립트, 매크로, 봇, 크롤러` 등 자동화 수단으로 주기적/반복적으로 접근하는 행위를 금지하고 있습니다.
 - 네이버 개발자 FAQ에는 `검색결과를 보여주는 서비스` 또는 `네이버와 유사한 검색서비스`의 경우 오픈 API 검색결과를 상업적 목적으로 사용할 수 없다고 안내되어 있습니다.
 - `map.naver.com/robots.txt`는 현재 크롤링을 허용하지 않는 방향으로 열려 있습니다.
 - 2026-04-16 공지와 2026-06-25 18:00 KST 종료 공지는 Web Dynamic Map(JS v3), Static Map, Geocoding, Reverse Geocoding 범위를 함께 봐야 합니다.
-- 공지 본문은 자동 수집에서 `body-unavailable`로 내려올 수 있어, 종료 범위는 공지 메타와 공식 문서 교차 확인 수준으로만 기록합니다.
+- 공지 본문은 ncloud notice HTML source(`__NUXT_DATA__`)에서 직접 확인됐고, 종료 범위도 본문 기준으로 적었습니다.
 - 이 때문에 지도/지오코딩 레이어는 `네이버 Maps 계열 유지`가 아니라 `standalone Maps 대체 경로`를 먼저 검토해야 합니다.
 - 2026-05-18 라이브 확인에서는 지역 검색 API의 `telephone`가 계속 비어 있었고, `link`는 비어 있거나 외부 URL/Naver URL이 섞여 있었습니다.
 - 같은 라이브 확인에서 `display=10` 요청은 `display=5`로, `start=2` 요청은 `start=1`로 사실상 보정되었습니다.

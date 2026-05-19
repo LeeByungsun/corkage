@@ -16,7 +16,7 @@
 - 종료 시점은 `2026-06-25 18:00 KST`로 본다.
 - 종료 범위는 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding`을 포함하는 지도 계열로 본다.
 - 따라서 현재 저장소에서는 이 묶음을 장기 고정 계약으로 두지 않고, `NAVER Cloud Platform Maps`의 standalone 경로와 `Services > Application Services > Maps` 콘솔 경로를 대체안으로 본다.
-- 자동 수집 기준으로는 2026-04-16 공지의 본문 body를 직접 읽지 못했다. 종료 시점과 범위는 `공지 메타데이터 + 현재 공식 Maps 문서 + worker findings`를 합쳐 문서 전제에 반영한다.
+- 2026-04-16 공지 본문은 ncloud notice HTML source(`__NUXT_DATA__`)에서 확인했다. 다만 동적 렌더링 화면만 보면 본문이 바로 드러나지 않아 source inspection이 필요했다.
 
 ## 검증 범위
 
@@ -112,7 +112,7 @@
 - 종료 시점은 `2026-06-25 18:00 KST`로 안내됨
 - 종료 범위는 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding`이다
 - 대체 경로는 `standalone Maps` 계열, 즉 네이버 클라우드 플랫폼 Maps/Enterprise API 이관이다
-- 자동 수집 과정에서는 일부 공지 본문이 `body-unavailable`로 내려와, 제목/스니펫/미러 문구를 함께 대조해야 했다
+- 공지 본문은 ncloud notice HTML source(`__NUXT_DATA__`)에서 직접 확인했고, 제목/등록일 메타와 함께 종료 범위를 교차 확인했다
 
 판단:
 
@@ -197,7 +197,7 @@ python3 scripts/verify_naver_local_search_live.py
 - PASS: `map.naver.com/robots.txt` 확인 결과 현재 크롤링 친화적 상태가 아님
 - PASS: 2026-04-16 공지와 2026-06-25 18:00 KST 종료 범위가 Maps 계열 종료 문맥과 일치함
 - PASS: `scripts/verify_naver_local_search_live.py`를 통해 같은 검증을 반복 실행할 수 있게 됨
-- PASS: `2026-04-16` 공지의 종료 시점, 종료 범위, standalone Maps 대체 경로, body-unavailable caveat 를 현재 문서 전제에 반영함
+- PASS: `2026-04-16` 공지의 종료 시점, 종료 범위, standalone Maps 대체 경로, 공식 본문 확인 경로를 현재 문서 전제에 반영함
 
 ## 저장소 검증 메모
 
@@ -211,7 +211,7 @@ python3 scripts/verify_naver_local_search_live.py
 - `네이버 웹/내부 API 크롤링을 운영 기본 경로로 채택하지 않는다`
 - `지도/지오코딩 레이어는 standalone Maps 대체 경로를 기준으로 재선정한다`
 
-위 3가지는 현재 문서만으로도 다음 단계 제품 판단을 내려도 됩니다.
+위 4가지는 현재 문서만으로도 다음 단계 제품 판단을 내려도 됩니다.
 
 `2026-06-25 18:00 KST` 종료 시점은 지금 문서의 전제에 반영해도 됩니다.
 이제 남는 의사결정은 `legacy AI NAVER API 지도 묶음`을 어디까지 걷어내고 `standalone Maps`를 어디에 적용할지의 구현 범위 조정입니다.
