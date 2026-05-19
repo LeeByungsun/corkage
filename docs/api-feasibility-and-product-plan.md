@@ -15,8 +15,8 @@
 이번 재확인에서 중요한 제한이 더 명확해졌습니다.
 
 - 2026-04-16 공지 기준으로 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding` 계열은 `2026-06-25 18:00 KST` 종료 시점을 반영해 봐야 합니다.
-- 따라서 지도/지오코딩 쪽은 `NAVER Cloud Platform Maps`의 standalone 경로를 대체안으로 두는 편이 안전합니다.
-- 실패 응답은 body가 항상 존재한다고 가정하지 않습니다. 운영 판정은 HTTP status와 공식 문서를 우선 기준으로 둡니다.
+- 따라서 지도/지오코딩 쪽은 `NAVER Cloud Platform Maps`의 standalone 경로와 `Services > Application Services > Maps` 콘솔 경로를 대체안으로 두는 편이 안전합니다.
+- 자동 수집 기준으로는 2026-04-16 공지의 본문 body를 직접 읽지 못했습니다. 종료 시점과 범위는 `공지 메타데이터 + 현재 공식 Maps 문서 + worker findings`를 합쳐 이 문서 전제에 반영합니다.
 - 네이버 API 서비스 이용약관은 `2025년 5월 27일 개정` 기준으로, 네이버 지역정보를 수집해 `별도 데이터베이스로 관리하며 이용하는 행위`를 금지하고 있습니다.
 - 같은 약관은 회사의 사전 승인 없이 `스크립트, 매크로, 봇, 크롤러` 등 자동화 수단으로 주기적/반복적으로 접근하는 행위를 금지하고 있습니다.
 - 네이버 개발자 FAQ에는 `검색결과를 보여주는 서비스` 또는 `네이버와 유사한 검색서비스`의 경우 오픈 API 검색결과를 상업적 목적으로 사용할 수 없다고 안내되어 있습니다.
@@ -37,8 +37,8 @@
 
 - NAVER Cloud Platform Maps의 Web Dynamic Map(JS v3)로 웹 지도 표시
 - 지도 위 마커/오버레이 표시
-- Geocoding API로 주소 -> 좌표 변환
-- Reverse Geocoding API 계열로 좌표 -> 주소 변환
+- standalone Maps의 Geocoding API로 주소 -> 좌표 변환
+- standalone Maps의 Reverse Geocoding API 계열로 좌표 -> 주소 변환
 - 지역 검색 API로 식당/업체 후보 검색
 - 지역 검색 결과에서 `title`, `category`, `description`, `address`, `roadAddress`, `mapx`, `mapy`, `link` 같은 기본 필드 확인
 
@@ -65,7 +65,7 @@
 
 가장 중요한 결론은 이것입니다.
 
-`네이버 지도는 지도/위치 표현용 후보일 수 있지만, 네이버 검색 결과를 제품용 식당 DB의 기반으로 삼는 방향은 현재 약관/정책 기준으로 위험하다.`
+`네이버 지도는 standalone Maps 기준으로는 지도/위치 표현용 후보일 수 있지만, 네이버 검색 결과를 제품용 식당 DB의 기반으로 삼는 방향은 현재 약관/정책 기준으로 위험하다.`
 
 이 결론은 아래 두 가지를 합친 판단입니다.
 
@@ -78,7 +78,7 @@
 
 가장 현실적인 첫 버전입니다.
 
-- 지도는 네이버 지도 사용
+- 지도가 꼭 필요하면 standalone Maps의 Web Dynamic Map(JS v3) 사용
 - 식당 기본 정보는 `수동 입력` 또는 `약관상 저장/표시가 명확히 허용되는 별도 소스` 사용
 - 네이버 검색은 운영자 참고용 수동 확인 정도로만 제한적으로 검토
 - 콜키지 가능 여부는 직접 조사 후 저장
@@ -302,7 +302,7 @@
 
 ## 9. 구현 전 체크리스트
 
-- [ ] standalone Maps 사용 여부 확정
+- [ ] standalone Maps의 Web Dynamic Map(JS v3) 사용 여부 확정
 - [ ] 지역 검색 API 사용 여부 확정
 - [ ] Geocoding/Reverse Geocoding 필요 여부 확정
 - [ ] legacy 지도 묶음을 버리고 standalone Maps 경로로 전환할지 확정
@@ -319,6 +319,8 @@
 ## 참고 링크
 
 - NAVER Cloud Maps overview: https://api.ncloud-docs.com/docs/en/application-maps-overview
+- Maps product page: https://www.ncloud.com/api-cms/service-product/static/maps
+- 지도 API 종료 notice metadata: https://www.ncloud.com/v2/support/notice/all/2158
 - Web Dynamic Map(JS v3): https://api.ncloud-docs.com/docs/en/application-maps-dynamic
 - Static Map: https://api.ncloud-docs.com/docs/en/application-maps-static
 - Geocoding API: https://api.ncloud-docs.com/docs/en/application-maps-geocoding
