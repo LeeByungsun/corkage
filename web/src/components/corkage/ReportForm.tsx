@@ -13,7 +13,6 @@ import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
 import type {
   CorkageReport,
   CorkageStatus,
-  ReportStoreMatchType,
   ReportType,
 } from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
@@ -21,9 +20,11 @@ import { ReviewStateBadge } from './ReviewStateBadge';
 type DraftState = {
   storeName: string;
   memo: string;
+  matchLabel: string;
 };
 
 export function ReportForm() {
+  const [selectedPlaceId, setSelectedPlaceId] = useState('');
   const [submitted, setSubmitted] = useState<DraftState | null>(null);
   const [localReports, setLocalReports] = useState<CorkageReport[]>([]);
   const [storeMatchType, setStoreMatchType] =
@@ -42,8 +43,10 @@ export function ReportForm() {
   }, [currentStores, selectedPlaceId]);
 
   const seededReports = useMemo(() => getReports(), []);
-  const selectedStore = currentStores.find(
-    (store) => store.placeId === selectedPlaceId,
+  const matchedStore = useMemo(
+    () =>
+      currentStores.find((store) => store.placeId === selectedPlaceId) ?? null,
+    [currentStores, selectedPlaceId],
   );
   const acceptedPreviews = seededReports
     .map((report) =>
@@ -55,19 +58,17 @@ export function ReportForm() {
     event.preventDefault();
 
     const form = new FormData(event.currentTarget);
-    const nextStoreMatchType = parseStoreMatchType(
-      String(form.get('storeMatchType') ?? 'candidate'),
-    );
-    const matchedStore =
-      nextStoreMatchType === 'existing'
-        ? currentStores.find(
-            (store) => store.placeId === String(form.get('existingPlaceId') ?? ''),
-          )
-        : undefined;
+    const matchedPlaceId = String(form.get('placeId') ?? '').trim();
+    const selectedStore =
+      currentStores.find((store) => store.placeId === matchedPlaceId) ?? null;
+    const typedStoreName = String(form.get('storeName') ?? '').trim();
+    const reportType = String(form.get('reportType') ?? 'new') as ReportType;
     const nextState: DraftState = {
-      storeName:
-        matchedStore?.name ?? String(form.get('storeName') ?? '').trim(),
+      storeName: selectedStore?.name ?? typedStoreName,
       memo: String(form.get('memo') ?? ''),
+      matchLabel: selectedStore
+        ? `${selectedStore.name} · ${selectedStore.placeId}`
+        : '신규 식당 candidate',
     };
 
     if (nextStoreMatchType === 'existing' && !matchedStore) {
@@ -76,72 +77,60 @@ export function ReportForm() {
 
     const nextReport: CorkageReport = {
       reportId: `draft-${Date.now()}`,
-      storeMatchType: nextStoreMatchType,
-      placeId: matchedStore?.placeId,
+      placeId: selectedStore?.placeId,
       storeName: nextState.storeName,
-      reportType: String(form.get('reportType') ?? 'new') as ReportType,
-      reportedStatus: mapReportedStatus(String(form.get('reportedStatus') ?? 'unknown')),
+      reportType: selectedStore && reportType === 'new' ? 'status' : reportType,
+      reportedStatus: mapReportedStatus(
+        String(form.get('reportedStatus') ?? 'unknown'),
+      ),
       reportedFee: parseFeeValue(String(form.get('reportedFee') ?? '')),
       memo: nextState.memo,
       evidenceUrl: String(form.get('evidenceUrl') ?? '') || undefined,
       submittedAt: new Date().toISOString().slice(0, 10),
       reviewState: 'pending',
-      reviewNote: '로컬 목업 저장소에 임시 저장됨',
+      reviewNote: selectedStore
+        ? '기존 식당 제보가 로컬 목업 저장소에 저장됨'
+        : '신규 후보 제보가 로컬 목업 저장소에 저장됨',
     };
 
     setSubmitted(nextState);
     setLocalReports(saveDraftReport(nextReport));
     event.currentTarget.reset();
+    setSelectedPlaceId('');
   }
 
   return (
     <div className="report-layout">
       <form className="report-form" onSubmit={handleSubmit}>
         <label>
-          <span>제보 대상</span>
+          <span>기존 식당 연결</span>
           <select
-            name="storeMatchType"
-            value={storeMatchType}
-            onChange={(event) =>
-              setStoreMatchType(parseStoreMatchType(event.target.value))
-            }
+            name="placeId"
+            value={selectedPlaceId}
+            onChange={(event) => setSelectedPlaceId(event.target.value)}
           >
-            <option value="candidate">신규 식당 후보</option>
-            <option value="existing">기존 식당 수정 제보</option>
+            <option value="">신규 식당 candidate로 저장</option>
+            {currentStores.map((store) => (
+              <option key={store.placeId} value={store.placeId}>
+                {store.name} · {store.district}
+              </option>
+            ))}
           </select>
         </label>
 
-        {storeMatchType === 'existing' ? (
-          <label>
-            <span>기존 식당 선택</span>
-            <select
-              name="existingPlaceId"
-              required
-              value={selectedPlaceId}
-              onChange={(event) => setSelectedPlaceId(event.target.value)}
-            >
-              {currentStores.map((store) => (
-                <option key={store.placeId} value={store.placeId}>
-                  {store.name} · {store.district}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+        <p className="muted">
+          {matchedStore
+            ? '기존 식당 제보는 accepted와 동시에 canonical override에 바로 반영됩니다.'
+            : '선택하지 않으면 신규 식당 candidate로 저장되고 기존 canonical을 덮지 않습니다.'}
+        </p>
 
         <label>
           <span>식당명</span>
-          {storeMatchType === 'existing' ? (
-            <input
-              disabled
-              name="storeName"
-              placeholder="예: 빈테이블 청담"
-              value={selectedStore?.name ?? ''}
-              readOnly
-            />
-          ) : (
-            <input name="storeName" required placeholder="예: 빈테이블 청담" />
-          )}
+          <input
+            name="storeName"
+            required={!selectedPlaceId}
+            placeholder="예: 빈테이블 청담"
+          />
         </label>
 
         <label>
@@ -207,6 +196,7 @@ export function ReportForm() {
           <div className="submission-card" role="status">
             <h3>임시 저장 완료</h3>
             <p>{submitted.storeName} 제보 초안을 브라우저에서 확인했습니다.</p>
+            <p>{submitted.matchLabel}</p>
             <p>현재는 로컬 목업 저장소에 `pending` 상태로 저장됩니다.</p>
             <pre>{submitted.memo || '메모 없음'}</pre>
           </div>
@@ -229,10 +219,10 @@ export function ReportForm() {
                   </div>
                   <p>{report.memo}</p>
                   <small>
-                    {report.storeMatchType === 'existing'
-                      ? `기존 식당 매칭 · ${report.placeId}`
-                      : '신규 식당 candidate'}{' '}
-                    · {report.submittedAt} 저장
+                    {report.submittedAt} 저장 ·{' '}
+                    {report.placeId
+                      ? `기존 식당 연결 ${report.placeId}`
+                      : '신규 식당 candidate'}
                   </small>
                 </li>
               ))}

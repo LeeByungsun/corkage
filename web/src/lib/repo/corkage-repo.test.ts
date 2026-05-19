@@ -92,22 +92,20 @@ describe('corkage-repo', () => {
     expect(applyAcceptedReportToCanonical(report!)).toBeNull();
   });
 
-  it('does not apply accepted candidate reports without placeId to canonical', () => {
-    const report = {
-      reportId: 'candidate-report-001',
-      storeMatchType: 'candidate' as const,
-      storeName: '신규 후보 식당',
+  it('keeps accepted new-candidate reports out of canonical state', () => {
+    const candidateReport = {
+      reportId: 'draft-candidate-001',
+      storeName: '새 식당 후보',
       reportType: 'new' as const,
       reportedStatus: 'available' as const,
-      reportedFee: 18000,
-      memo: '신규 제보 후보',
-      submittedAt: '2026-05-19',
+      memo: '신규 후보 제보',
+      submittedAt: '2026-05-18',
       reviewState: 'accepted' as const,
-      reviewNote: '후보로만 유지',
       reviewedAt: '2026-05-19',
     };
 
-    expect(applyAcceptedReportToCanonical(report)).toBeNull();
+    expect(buildCanonicalPreviewFromAcceptedReport(candidateReport)).toBeNull();
+    expect(applyAcceptedReportToCanonical(candidateReport)).toBeNull();
   });
 
   it('merges accepted canonical overrides into user-facing counts', () => {

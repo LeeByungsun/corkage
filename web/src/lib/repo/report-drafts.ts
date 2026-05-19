@@ -42,18 +42,41 @@ export function updateDraftReportReview(
 ): CorkageReport[] {
   const nextReports = readDraftReports().map((report) =>
     report.reportId === reportId
-      ? {
-          ...report,
-          reviewState: update.reviewState,
-          reviewNote: update.reviewNote ?? report.reviewNote,
-          reviewedAt: update.reviewedAt ?? report.reviewedAt,
-          appliedAt: update.appliedAt ?? report.appliedAt,
-        }
+      ? buildUpdatedDraftReport(report, update)
       : report,
   );
 
   persistDraftReports(nextReports);
   return nextReports;
+}
+
+function buildUpdatedDraftReport(
+  report: CorkageReport,
+  update: {
+    reviewState: ReviewState;
+    reviewNote?: string;
+    reviewedAt?: string;
+    appliedAt?: string;
+  },
+): CorkageReport {
+  const nextReport: CorkageReport = {
+    ...report,
+    reviewState: update.reviewState,
+  };
+
+  if ('reviewNote' in update) {
+    nextReport.reviewNote = update.reviewNote;
+  }
+
+  if ('reviewedAt' in update) {
+    nextReport.reviewedAt = update.reviewedAt;
+  }
+
+  if ('appliedAt' in update) {
+    nextReport.appliedAt = update.appliedAt;
+  }
+
+  return nextReport;
 }
 
 function persistDraftReports(reports: CorkageReport[]) {
