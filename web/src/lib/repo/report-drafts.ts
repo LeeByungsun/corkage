@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeReport } from './corkage-repo';
 import type { CorkageReport, ReviewState } from '../types/corkage';
 
 export const REPORT_DRAFTS_STORAGE_KEY = 'corkage-mvp-report-drafts';
@@ -17,7 +18,7 @@ export function readDraftReports(): CorkageReport[] {
 
   try {
     const parsed = JSON.parse(raw) as CorkageReport[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeReport) : [];
   } catch {
     window.localStorage.removeItem(REPORT_DRAFTS_STORAGE_KEY);
     return [];
@@ -25,7 +26,7 @@ export function readDraftReports(): CorkageReport[] {
 }
 
 export function saveDraftReport(report: CorkageReport): CorkageReport[] {
-  const nextReports = [report, ...readDraftReports()];
+  const nextReports = [normalizeReport(report), ...readDraftReports()];
   persistDraftReports(nextReports);
   return nextReports;
 }

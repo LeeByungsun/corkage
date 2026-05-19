@@ -92,6 +92,24 @@ describe('corkage-repo', () => {
     expect(applyAcceptedReportToCanonical(report!)).toBeNull();
   });
 
+  it('does not apply accepted candidate reports without placeId to canonical', () => {
+    const report = {
+      reportId: 'candidate-report-001',
+      storeMatchType: 'candidate' as const,
+      storeName: '신규 후보 식당',
+      reportType: 'new' as const,
+      reportedStatus: 'available' as const,
+      reportedFee: 18000,
+      memo: '신규 제보 후보',
+      submittedAt: '2026-05-19',
+      reviewState: 'accepted' as const,
+      reviewNote: '후보로만 유지',
+      reviewedAt: '2026-05-19',
+    };
+
+    expect(applyAcceptedReportToCanonical(report)).toBeNull();
+  });
+
   it('merges accepted canonical overrides into user-facing counts', () => {
     const report = getReportById('report-accepted-001');
 

@@ -35,6 +35,11 @@ describe('ReviewQueue', () => {
       within(draftCard).getByText('canonical 반영 preview'),
     ).toBeInTheDocument();
     expect(within(draftCard).getAllByText('반영 가능').length).toBeGreaterThan(0);
+
+    const raw = window.localStorage.getItem('corkage-mvp-canonical-overrides');
+
+    expect(raw).not.toBeNull();
+    expect(raw).toContain('seasonal-noodle-lab');
   });
 
   it('persists canonical override when accepted draft is applied', () => {
