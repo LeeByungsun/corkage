@@ -5,6 +5,7 @@
 
 # local OMX runtime artifacts
 .omx/
+.omx-worker-logs/
 
 # local exports
 tokscale-export-*.json
