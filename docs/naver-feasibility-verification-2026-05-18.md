@@ -10,7 +10,13 @@
 2. `docs/naver-local-search-checklist.md`
 3. `docs/naver-web-crawling-feasibility.md`
 
-추가로 이번 정리에서는 `2026-04-16` 공지, `2026-06-25 18:00 KST` 종료 시점, `Web Dynamic Map(JS v3) / Static Map / Geocoding / Reverse Geocoding` 종료 범위, `standalone Maps` 대체 경로, 그리고 일부 자동 수집 결과가 `body-unavailable`로 내려오는 경우의 확인 한계를 같이 반영합니다.
+## 2026-04-16 공지 재확인 요약
+
+- 2026-04-16 공지는 NAVER 지도 계열의 종료 일정을 다시 확인하게 만든 기준점입니다.
+- 종료 시점은 `2026-06-25 18:00 KST`로 본다.
+- 종료 범위는 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding`을 포함하는 지도 계열로 본다.
+- 따라서 현재 저장소에서는 이 묶음을 장기 고정 계약으로 두지 않고, `NAVER Cloud Platform Maps`의 standalone 경로를 대체안으로 본다.
+- 실패 응답은 body가 항상 존재한다고 가정하지 않는다. 검증과 구현은 HTTP status와 공식 문서를 우선 기준으로 둔다.
 
 ## 검증 범위
 
@@ -62,22 +68,13 @@
 
 - https://developers.naver.com/products/intro/terms/terms.md
 - https://developers.naver.com/notice/article/21979
-- 2026-04-16 공지
-
-주의:
-
-- 현재 본문은 확인되지 않았고, 공지 메타와 다른 공식 문서의 교차 확인만 반영합니다.
+- https://developers.naver.com/notice/article/7540
 
 재확인 내용:
 
 - 약관은 `네이버 지역정보를 수집하여 별도 데이터베이스로 관리하며 이용하는 행위`를 금지 예시로 둠
 - 개정 공지는 사전 승인 없는 자동화 수단(스크립트, 매크로, 봇, 크롤러 등)의 주기적/반복적 접근을 금지함
-- 2026-06-25 18:00 KST를 기점으로 다음 Maps 계열이 종료 범위에 포함됩니다.
-  - Web Dynamic Map(JS v3)
-  - Static Map
-  - Geocoding
-  - Reverse Geocoding
-- 대체 경로는 standalone Maps를 우선 검토하는 쪽으로 잡는 것이 안전합니다.
+- 지도 Open API 이관 공지는 네이버 개발자센터 대신 NAVER Cloud Platform Maps로 옮겨가는 경로를 공식화함
 
 판단:
 
@@ -199,6 +196,7 @@ python3 scripts/verify_naver_local_search_live.py
 - PASS: `map.naver.com/robots.txt` 확인 결과 현재 크롤링 친화적 상태가 아님
 - PASS: 2026-04-16 공지와 2026-06-25 18:00 KST 종료 범위가 Maps 계열 종료 문맥과 일치함
 - PASS: `scripts/verify_naver_local_search_live.py`를 통해 같은 검증을 반복 실행할 수 있게 됨
+- PASS: 2026-04-16 공지의 종료 시점과 대체 경로를 현재 문서 전제에 반영함
 
 ## 저장소 검증 메모
 
@@ -214,12 +212,8 @@ python3 scripts/verify_naver_local_search_live.py
 
 위 3가지는 현재 문서만으로도 다음 단계 제품 판단을 내려도 됩니다.
 
-남는 확인 사항은 1개입니다.
-
-- 공지 본문이 현재 확인되지 않아 종료 범위는 제목/메타와 공식 문서 교차 확인 수준으로만 기록합니다.
-
-이 항목은 `네이버를 주 데이터 소스로 쓰지 말자`는 핵심 결론을 바꾸지는 않습니다.
-다만 이후 실제 지도 벤더를 잠그기 전에는 standalone Maps를 기본 대체안으로 두고 다시 확인하는 편이 안전합니다.
+`2026-06-25 18:00 KST` 종료 시점은 지금 문서의 전제에 반영해도 됩니다.
+이제 남는 의사결정은 `legacy 지도 묶음`을 어디까지 걷어내고 `standalone Maps`를 어디에 적용할지의 구현 범위 조정입니다.
 
 ## 최종 판단
 

@@ -14,6 +14,9 @@
 
 이번 재확인에서 중요한 제한이 더 명확해졌습니다.
 
+- 2026-04-16 공지 기준으로 `Web Dynamic Map(JS v3)`, `Static Map`, `Geocoding`, `Reverse Geocoding` 계열은 `2026-06-25 18:00 KST` 종료 시점을 반영해 봐야 합니다.
+- 따라서 지도/지오코딩 쪽은 `NAVER Cloud Platform Maps`의 standalone 경로를 대체안으로 두는 편이 안전합니다.
+- 실패 응답은 body가 항상 존재한다고 가정하지 않습니다. 운영 판정은 HTTP status와 공식 문서를 우선 기준으로 둡니다.
 - 네이버 API 서비스 이용약관은 `2025년 5월 27일 개정` 기준으로, 네이버 지역정보를 수집해 `별도 데이터베이스로 관리하며 이용하는 행위`를 금지하고 있습니다.
 - 같은 약관은 회사의 사전 승인 없이 `스크립트, 매크로, 봇, 크롤러` 등 자동화 수단으로 주기적/반복적으로 접근하는 행위를 금지하고 있습니다.
 - 네이버 개발자 FAQ에는 `검색결과를 보여주는 서비스` 또는 `네이버와 유사한 검색서비스`의 경우 오픈 API 검색결과를 상업적 목적으로 사용할 수 없다고 안내되어 있습니다.
@@ -32,8 +35,8 @@
 
 ### 가능한 것
 
-- standalone Maps 기준으로 웹 지도 표시
-- standalone Maps 기준으로 지도 위 마커/오버레이 표시
+- NAVER Cloud Platform Maps의 Web Dynamic Map(JS v3)로 웹 지도 표시
+- 지도 위 마커/오버레이 표시
 - Geocoding API로 주소 -> 좌표 변환
 - Reverse Geocoding API 계열로 좌표 -> 주소 변환
 - 지역 검색 API로 식당/업체 후보 검색
@@ -302,7 +305,7 @@
 - [ ] standalone Maps 사용 여부 확정
 - [ ] 지역 검색 API 사용 여부 확정
 - [ ] Geocoding/Reverse Geocoding 필요 여부 확정
-- [ ] 2026-04-16 공지와 2026-06-25 18:00 KST 종료 범위 재확인
+- [ ] legacy 지도 묶음을 버리고 standalone Maps 경로로 전환할지 확정
 - [ ] 네이버 검색 결과를 영속 저장해도 되는지 약관/제휴 관점 판단 완료
 - [ ] 네이버 크롤링/자동화 접근을 제품 경로에서 배제할지 여부 확정
 - [ ] 브라우저 노출 키와 서버 비밀키 경계 확정
@@ -315,8 +318,10 @@
 
 ## 참고 링크
 
-- NAVER Maps API v3 Overview: https://navermaps.github.io/maps.js.en/docs/
-- NAVER Cloud Maps overview: https://guide.ncloud-docs.com/docs/en/maps-overview
-- Geocoding API: https://api.ncloud-docs.com/docs/en/ai-naver-mapsgeocoding-geocode
+- NAVER Cloud Maps overview: https://api.ncloud-docs.com/docs/en/application-maps-overview
+- Web Dynamic Map(JS v3): https://api.ncloud-docs.com/docs/en/application-maps-dynamic
+- Static Map: https://api.ncloud-docs.com/docs/en/application-maps-static
+- Geocoding API: https://api.ncloud-docs.com/docs/en/application-maps-geocoding
+- Reverse Geocoding API: https://api.ncloud-docs.com/docs/en/application-maps-reversegeocoding
 - Naver Search Local API: https://developers.naver.com/docs/serviceapi/search/local/local.md
 - Naver Open API list: https://developers.naver.com/products/intro/plan/plan.md
