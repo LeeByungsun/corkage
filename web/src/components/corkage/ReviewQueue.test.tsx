@@ -41,6 +41,11 @@ describe('ReviewQueue', () => {
       within(draftCard).getByText('canonical 반영 preview'),
     ).toBeInTheDocument();
     expect(within(draftCard).getAllByText('반영 가능').length).toBeGreaterThan(0);
+    expect(
+      within(draftCard).getByText((content) =>
+        content.includes('기존 식당 매칭 · seasonal-noodle-lab'),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('keeps accepted new restaurant reports as candidates without canonical overrides', () => {
@@ -76,6 +81,16 @@ describe('ReviewQueue', () => {
     expect(
       within(draftCard).queryByText('canonical 반영 preview'),
     ).not.toBeInTheDocument();
+    expect(
+      within(draftCard).getByText(
+        '신규 식당 제보는 candidate로 유지되고 canonical을 덮지 않습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(draftCard).getByText(
+        '신규 식당 제보는 candidate로만 유지되며 accepted 되어도 기존 canonical을 덮어쓰지 않습니다.',
+      ),
+    ).toBeInTheDocument();
   });
 });
 

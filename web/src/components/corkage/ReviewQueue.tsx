@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   applyAcceptedReportToCanonical,
   buildCanonicalPreviewFromAcceptedReport,
+  isExistingStoreReport,
   getAllStores,
   getReports,
   mergeStores,

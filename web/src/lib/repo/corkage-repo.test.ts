@@ -96,6 +96,7 @@ describe('corkage-repo', () => {
     const candidateReport = {
       reportId: 'draft-candidate-001',
       storeName: '새 식당 후보',
+      storeMatchType: 'candidate' as const,
       reportType: 'new' as const,
       reportedStatus: 'available' as const,
       memo: '신규 후보 제보',

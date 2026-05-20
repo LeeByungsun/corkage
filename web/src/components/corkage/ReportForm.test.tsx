@@ -24,6 +24,7 @@ describe('ReportForm', () => {
     const status = screen.getByRole('status');
 
     expect(savedReports[0]).toMatchObject({
+      storeMatchType: 'existing',
       placeId: 'seasonal-noodle-lab',
       reportType: 'status',
       reviewState: 'pending',
@@ -41,6 +42,9 @@ describe('ReportForm', () => {
   it('keeps new restaurant reports as candidates without a placeId', () => {
     render(<ReportForm />);
 
+    fireEvent.change(screen.getByLabelText('기존 식당 연결'), {
+      target: { value: '' },
+    });
     fireEvent.change(screen.getByLabelText('식당명'), {
       target: { value: '새 식당' },
     });
@@ -55,11 +59,17 @@ describe('ReportForm', () => {
     );
 
     expect(savedReports[0]).toMatchObject({
+      storeMatchType: 'candidate',
       reportType: 'new',
       reviewState: 'pending',
       storeName: '새 식당',
     });
     expect(savedReports[0].placeId).toBeUndefined();
     expect(screen.getAllByText('신규 식당 candidate').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        '선택하지 않으면 신규 식당 candidate로 저장되고 기존 canonical을 덮지 않습니다.',
+      ),
+    ).toBeInTheDocument();
   });
 });

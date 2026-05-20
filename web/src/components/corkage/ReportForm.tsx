@@ -14,6 +14,7 @@ import type {
   CorkageReport,
   CorkageStatus,
   ReportType,
+  ReportStoreMatchType,
 } from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
 
@@ -27,9 +28,6 @@ export function ReportForm() {
   const [selectedPlaceId, setSelectedPlaceId] = useState('');
   const [submitted, setSubmitted] = useState<DraftState | null>(null);
   const [localReports, setLocalReports] = useState<CorkageReport[]>([]);
-  const [storeMatchType, setStoreMatchType] =
-    useState<ReportStoreMatchType>('candidate');
-  const [selectedPlaceId, setSelectedPlaceId] = useState('');
   const currentStores = useCanonicalStores();
 
   useEffect(() => {
@@ -37,7 +35,10 @@ export function ReportForm() {
   }, []);
 
   useEffect(() => {
-    if (!currentStores.some((store) => store.placeId === selectedPlaceId)) {
+    if (
+      selectedPlaceId !== '' &&
+      !currentStores.some((store) => store.placeId === selectedPlaceId)
+    ) {
       setSelectedPlaceId(currentStores[0]?.placeId ?? '');
     }
   }, [currentStores, selectedPlaceId]);
@@ -63,6 +64,10 @@ export function ReportForm() {
       currentStores.find((store) => store.placeId === matchedPlaceId) ?? null;
     const typedStoreName = String(form.get('storeName') ?? '').trim();
     const reportType = String(form.get('reportType') ?? 'new') as ReportType;
+    const nextStoreMatchType: ReportStoreMatchType = selectedStore
+      ? 'existing'
+      : 'candidate';
+
     const nextState: DraftState = {
       storeName: selectedStore?.name ?? typedStoreName,
       memo: String(form.get('memo') ?? ''),
@@ -71,12 +76,13 @@ export function ReportForm() {
         : '신규 식당 candidate',
     };
 
-    if (nextStoreMatchType === 'existing' && !matchedStore) {
+    if (nextStoreMatchType === 'existing' && !selectedStore) {
       return;
     }
 
     const nextReport: CorkageReport = {
       reportId: `draft-${Date.now()}`,
+      storeMatchType: nextStoreMatchType,
       placeId: selectedStore?.placeId,
       storeName: nextState.storeName,
       reportType: selectedStore && reportType === 'new' ? 'status' : reportType,
@@ -280,8 +286,4 @@ function mapReportedStatus(value: string): CorkageStatus {
   }
 
   return 'unknown';
-}
-
-function parseStoreMatchType(value: string): ReportStoreMatchType {
-  return value === 'existing' ? 'existing' : 'candidate';
 }
