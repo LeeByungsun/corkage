@@ -34,8 +34,18 @@ describe('ReportForm', () => {
     expect(status).toHaveTextContent(
       '시즈널 누들랩 제보 초안을 브라우저에서 확인했습니다.',
     );
-    expect(status).toHaveTextContent('시즈널 누들랩 · seasonal-noodle-lab');
+    expect(status).toHaveTextContent('placeId 매칭 완료');
+    expect(status).toHaveTextContent(
+      '기존 식당 existing · 시즈널 누들랩 · seasonal-noodle-lab',
+    );
+    expect(status).toHaveTextContent(
+      'accepted 되면 seasonal-noodle-lab canonical override 검토 대상으로 연결됩니다.',
+    );
     expect(status).toHaveTextContent('와인 1병 반입 가능 확인');
+    expect(screen.getAllByText('기존 식당 연결').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/placeId seasonal-noodle-lab 연결됨 · canonical 반영 가능/),
+    ).toBeInTheDocument();
     expect(screen.getByText('검수 대기')).toBeInTheDocument();
   });
 
@@ -67,9 +77,7 @@ describe('ReportForm', () => {
     expect(savedReports[0].placeId).toBeUndefined();
     expect(screen.getAllByText('신규 식당 candidate').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(
-        '선택하지 않으면 신규 식당 candidate로 저장되고 기존 canonical을 덮지 않습니다.',
-      ),
+      screen.getByText('placeId 미연결 · canonical 반영 불가'),
     ).toBeInTheDocument();
   });
 });

@@ -95,8 +95,8 @@ describe('corkage-repo', () => {
   it('keeps accepted new-candidate reports out of canonical state', () => {
     const candidateReport = {
       reportId: 'draft-candidate-001',
-      storeName: '새 식당 후보',
       storeMatchType: 'candidate' as const,
+      storeName: '새 식당 후보',
       reportType: 'new' as const,
       reportedStatus: 'available' as const,
       memo: '신규 후보 제보',

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  applyAcceptedReportToCanonical,
   buildCanonicalPreviewFromAcceptedReport,
   isExistingStoreReport,
   getAllStores,
@@ -31,6 +30,13 @@ const REVIEW_STATE_OPTIONS: Array<{ value: ReviewState; label: string }> = [
   { value: 'rejected', label: '반려' },
   { value: 'needs_follow_up', label: '추가 확인 필요' },
 ];
+
+type MatchUi = {
+  badge: string;
+  summary: string;
+  note: string;
+  reviewRule: string;
+};
 
 export function ReviewQueue() {
   const [draftReports, setDraftReports] = useState<CorkageReport[]>([]);
@@ -139,8 +145,8 @@ export function ReviewQueue() {
                   getComparableStores(report),
                 )
               : null;
-
           const draft = isDraftReport(report.reportId);
+          const matchUi = getReviewMatchUi(report);
 
           return (
             <article key={report.reportId} className="review-card">
@@ -149,24 +155,29 @@ export function ReviewQueue() {
                   <p className="eyebrow">{report.reportType}</p>
                   <h2>{report.storeName}</h2>
                 </div>
-                <ReviewStateBadge reviewState={report.reviewState} />
+                <div className="review-card__badges">
+                  <span className="match-badge">{matchUi.badge}</span>
+                  <span className="match-badge">
+                    {isExistingStoreReport(report)
+                      ? '기존 식당 연결'
+                      : '신규 candidate'}
+                  </span>
+                  <ReviewStateBadge reviewState={report.reviewState} />
+                </div>
               </div>
 
               <p>{report.memo}</p>
               <small>
-                {isExistingStoreReport(report)
-                  ? `기존 식당 매칭 · ${report.placeId}`
-                  : '신규 식당 candidate'}{' '}
-                ·{' '}
-                제출일 {report.submittedAt}
+                {matchUi.summary} · 제출일 {report.submittedAt}
                 {report.reviewedAt ? ` · 검수일 ${report.reviewedAt}` : ''}
                 {report.appliedAt ? ` · canonical 반영 ${report.appliedAt}` : ''}
               </small>
               <p className="muted">
-                {report.placeId
-                  ? `기존 식당 연결: ${report.placeId}`
-                  : '신규 식당 candidate 제보'}
+                {isExistingStoreReport(report)
+                  ? `기존 식당 매칭 · ${report.placeId}`
+                  : 'placeId 미연결 candidate 제보'}
               </p>
+              <p className="muted">{matchUi.note}</p>
 
               <div className="review-controls">
                 <label>
@@ -202,16 +213,15 @@ export function ReviewQueue() {
                 </label>
 
                 <p className="muted">
-                  {report.placeId
-                    ? '기존 식당 제보는 accepted와 동시에 canonical override가 저장됩니다.'
+                  {isExistingStoreReport(report)
+                    ? matchUi.reviewRule
                     : '신규 식당 제보는 candidate로 유지되고 canonical을 덮지 않습니다.'}
                 </p>
               </div>
 
               {!isExistingStoreReport(report) ? (
                 <p className="muted">
-                  신규 식당 제보는 candidate로만 유지되며 accepted 되어도 기존
-                  canonical을 덮어쓰지 않습니다.
+                  신규 식당 제보는 candidate로만 유지되며 accepted 되어도 기존 canonical을 덮어쓰지 않습니다.
                 </p>
               ) : null}
 
@@ -240,4 +250,22 @@ export function ReviewQueue() {
 
 function isDraftReport(reportId: string) {
   return reportId.startsWith('draft-');
+}
+
+function getReviewMatchUi(report: CorkageReport): MatchUi {
+  if (isExistingStoreReport(report)) {
+    return {
+      badge: 'placeId 매칭 완료',
+      summary: `기존 식당 existing · ${report.placeId}`,
+      note: `placeId ${report.placeId}에 연결된 existing 제보입니다.`,
+      reviewRule: `accepted 시 ${report.placeId} canonical override preview를 만들 수 있습니다.`,
+    };
+  }
+
+  return {
+    badge: 'canonical 반영 불가',
+    summary: '신규 식당 candidate',
+    note: '기존 placeId가 없어서 accepted 되어도 canonical preview를 만들 수 없습니다.',
+    reviewRule: 'candidate 제보는 canonical override 저장 대상이 아닙니다.',
+  };
 }

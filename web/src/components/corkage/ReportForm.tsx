@@ -13,15 +13,25 @@ import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
 import type {
   CorkageReport,
   CorkageStatus,
-  ReportType,
   ReportStoreMatchType,
+  ReportType,
+  CorkageStore,
 } from '../../lib/types/corkage';
 import { ReviewStateBadge } from './ReviewStateBadge';
 
 type DraftState = {
   storeName: string;
   memo: string;
-  matchLabel: string;
+  storeMatchType: 'existing' | 'candidate';
+  matchBadge: string;
+  matchSummary: string;
+  matchNote: string;
+};
+
+type MatchUi = {
+  badge: string;
+  summary: string;
+  note: string;
 };
 
 export function ReportForm() {
@@ -36,10 +46,10 @@ export function ReportForm() {
 
   useEffect(() => {
     if (
-      selectedPlaceId !== '' &&
+      selectedPlaceId &&
       !currentStores.some((store) => store.placeId === selectedPlaceId)
     ) {
-      setSelectedPlaceId(currentStores[0]?.placeId ?? '');
+      setSelectedPlaceId('');
     }
   }, [currentStores, selectedPlaceId]);
 
@@ -49,11 +59,18 @@ export function ReportForm() {
       currentStores.find((store) => store.placeId === selectedPlaceId) ?? null,
     [currentStores, selectedPlaceId],
   );
-  const acceptedPreviews = seededReports
-    .map((report) =>
-      buildCanonicalPreviewFromAcceptedReport(report, currentStores),
-    )
-    .filter((preview): preview is NonNullable<typeof preview> => Boolean(preview));
+  const currentMatchUi = useMemo(() => getFormMatchUi(matchedStore), [matchedStore]);
+  const acceptedPreviews = useMemo(
+    () =>
+      seededReports
+        .map((report) =>
+          buildCanonicalPreviewFromAcceptedReport(report, currentStores),
+        )
+        .filter(
+          (preview): preview is NonNullable<typeof preview> => Boolean(preview),
+        ),
+    [currentStores, seededReports],
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,13 +84,14 @@ export function ReportForm() {
     const nextStoreMatchType: ReportStoreMatchType = selectedStore
       ? 'existing'
       : 'candidate';
-
+    const matchUi = getFormMatchUi(selectedStore);
     const nextState: DraftState = {
       storeName: selectedStore?.name ?? typedStoreName,
       memo: String(form.get('memo') ?? ''),
-      matchLabel: selectedStore
-        ? `${selectedStore.name} · ${selectedStore.placeId}`
-        : '신규 식당 candidate',
+      storeMatchType: nextStoreMatchType,
+      matchBadge: matchUi.badge,
+      matchSummary: matchUi.summary,
+      matchNote: matchUi.note,
     };
 
     if (nextStoreMatchType === 'existing' && !selectedStore) {
@@ -85,7 +103,10 @@ export function ReportForm() {
       storeMatchType: nextStoreMatchType,
       placeId: selectedStore?.placeId,
       storeName: nextState.storeName,
-      reportType: selectedStore && reportType === 'new' ? 'status' : reportType,
+      reportType:
+        nextStoreMatchType === 'existing' && reportType === 'new'
+          ? 'status'
+          : reportType,
       reportedStatus: mapReportedStatus(
         String(form.get('reportedStatus') ?? 'unknown'),
       ),
@@ -94,9 +115,10 @@ export function ReportForm() {
       evidenceUrl: String(form.get('evidenceUrl') ?? '') || undefined,
       submittedAt: new Date().toISOString().slice(0, 10),
       reviewState: 'pending',
-      reviewNote: selectedStore
-        ? '기존 식당 제보가 로컬 목업 저장소에 저장됨'
-        : '신규 후보 제보가 로컬 목업 저장소에 저장됨',
+      reviewNote:
+        nextStoreMatchType === 'existing'
+          ? '기존 식당 placeId 매칭 초안이 로컬 목업 저장소에 저장됨'
+          : '신규 candidate 제보가 로컬 목업 저장소에 저장됨',
     };
 
     setSubmitted(nextState);
@@ -126,9 +148,12 @@ export function ReportForm() {
 
         <p className="muted">
           {matchedStore
-            ? '기존 식당 제보는 accepted와 동시에 canonical override에 바로 반영됩니다.'
-            : '선택하지 않으면 신규 식당 candidate로 저장되고 기존 canonical을 덮지 않습니다.'}
+            ? '기존 식당 제보는 placeId가 연결된 상태라 accepted 시 canonical override 후보가 됩니다.'
+            : '선택하지 않으면 신규 식당 candidate로 저장되고 canonical 반영 대상이 되지 않습니다.'}
         </p>
+        <p className="eyebrow">{currentMatchUi.badge}</p>
+        <p className="muted">{currentMatchUi.summary}</p>
+        <p className="muted">{currentMatchUi.note}</p>
 
         <label>
           <span>식당명</span>
@@ -202,7 +227,14 @@ export function ReportForm() {
           <div className="submission-card" role="status">
             <h3>임시 저장 완료</h3>
             <p>{submitted.storeName} 제보 초안을 브라우저에서 확인했습니다.</p>
-            <p>{submitted.matchLabel}</p>
+            <p className="eyebrow">{submitted.matchBadge}</p>
+            <p>{submitted.matchSummary}</p>
+            <p className="muted">{submitted.matchNote}</p>
+            <p className="muted">
+              {submitted.storeMatchType === 'existing'
+                ? '기존 식당 연결 · canonical 반영 가능'
+                : '신규 candidate · canonical 반영 불가'}
+            </p>
             <p>현재는 로컬 목업 저장소에 `pending` 상태로 저장됩니다.</p>
             <pre>{submitted.memo || '메모 없음'}</pre>
           </div>
@@ -221,12 +253,22 @@ export function ReportForm() {
                 <li key={report.reportId} className="report-list__item">
                   <div className="report-list__header">
                     <strong>{report.storeName}</strong>
+                    <span className="match-badge">
+                      {report.storeMatchType === 'existing'
+                        ? '기존 식당 연결'
+                        : '신규 candidate'}
+                    </span>
                     <ReviewStateBadge reviewState={report.reviewState} />
                   </div>
                   <p>{report.memo}</p>
+                  <p className="muted">
+                    {report.storeMatchType === 'existing'
+                      ? `placeId ${report.placeId} 연결됨 · canonical 반영 가능`
+                      : 'placeId 미연결 · canonical 반영 불가'}
+                  </p>
                   <small>
                     {report.submittedAt} 저장 ·{' '}
-                    {report.placeId
+                    {report.storeMatchType === 'existing'
                       ? `기존 식당 연결 ${report.placeId}`
                       : '신규 식당 candidate'}
                   </small>
@@ -240,7 +282,8 @@ export function ReportForm() {
           <h2>accepted 제보 canonical 반영 예시</h2>
           <p className="muted">
             운영자 검수에서 accepted 되면 canonical 정보에 어떤 필드가 반영될지
-            미리 보여주는 뼈대입니다.
+            미리 보여주는 뼈대입니다. candidate 제보는 placeId가 없어서 이
+            preview에 포함되지 않습니다.
           </p>
           <ul className="report-list">
             {acceptedPreviews.map((preview) => (
@@ -286,4 +329,20 @@ function mapReportedStatus(value: string): CorkageStatus {
   }
 
   return 'unknown';
+}
+
+function getFormMatchUi(store: CorkageStore | null): MatchUi {
+  if (store) {
+    return {
+      badge: 'placeId 매칭 완료',
+      summary: `기존 식당 existing · ${store.name} · ${store.placeId}`,
+      note: `accepted 되면 ${store.placeId} canonical override 검토 대상으로 연결됩니다.`,
+    };
+  }
+
+  return {
+    badge: 'canonical 반영 불가',
+    summary: '신규 식당 candidate',
+    note: 'placeId 미연결 · accepted 되어도 canonical 반영 불가',
+  };
 }

@@ -37,6 +37,15 @@ describe('ReviewQueue', () => {
     expect(raw).not.toBeNull();
     expect(raw).toContain('seasonal-noodle-lab');
     expect(raw).toContain('user_report_reviewed');
+    expect(within(draftCard).getByText('placeId 매칭 완료')).toBeInTheDocument();
+    expect(
+      within(draftCard).getByText(/기존 식당 existing · seasonal-noodle-lab/),
+    ).toBeInTheDocument();
+    expect(
+      within(draftCard).getByText(
+        'accepted 시 seasonal-noodle-lab canonical override preview를 만들 수 있습니다.',
+      ),
+    ).toBeInTheDocument();
     expect(
       within(draftCard).getByText('canonical 반영 preview'),
     ).toBeInTheDocument();
@@ -76,7 +85,15 @@ describe('ReviewQueue', () => {
       window.localStorage.getItem('corkage-mvp-canonical-overrides'),
     ).toBeNull();
     expect(
-      within(draftCard).getByText('신규 식당 candidate 제보'),
+      within(draftCard).getByText('신규 candidate'),
+    ).toBeInTheDocument();
+    expect(
+      within(draftCard).getAllByText(/신규 식당 candidate/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(draftCard).getByText(
+        '기존 placeId가 없어서 accepted 되어도 canonical preview를 만들 수 없습니다.',
+      ),
     ).toBeInTheDocument();
     expect(
       within(draftCard).queryByText('canonical 반영 preview'),
