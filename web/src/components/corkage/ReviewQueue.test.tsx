@@ -1,42 +1,137 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, vi } from 'vitest';
 import { ReviewQueue } from './ReviewQueue';
+import type { ServerMvpState } from '../../lib/types/corkage';
 
 describe('ReviewQueue', () => {
+  let serverState: ServerMvpState;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
-    window.localStorage.clear();
+    serverState = {
+      draftReports: [],
+      canonicalOverrides: [],
+      reviewLogs: [],
+    };
+    fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+
+      if (method === 'GET') {
+        return createJsonResponse(serverState);
+      }
+
+      if (method === 'PATCH') {
+        const body = JSON.parse(String(init?.body ?? '{}'));
+        const report = serverState.draftReports.find(
+          (item) => item.reportId === body.reportId,
+        );
+
+        if (!report) {
+          return createJsonResponse(serverState, 404);
+        }
+
+        const nextReport = {
+          ...report,
+          reviewState: body.reviewState ?? report.reviewState,
+          reviewNote: body.reviewNote ?? report.reviewNote,
+          reviewedAt:
+            body.reviewState && body.reviewState !== 'pending'
+              ? '2026-05-22'
+              : undefined,
+          appliedAt:
+            report.placeId && body.reviewState === 'accepted'
+              ? '2026-05-22'
+              : undefined,
+        };
+
+        serverState = {
+          ...serverState,
+          draftReports: serverState.draftReports.map((item) =>
+            item.reportId === body.reportId ? nextReport : item,
+          ),
+          canonicalOverrides:
+            nextReport.placeId && nextReport.reviewState === 'accepted'
+              ? [
+                  {
+                    placeId: nextReport.placeId,
+                    name: nextReport.storeName,
+                    address: '서울시 강남구 압구정로 10',
+                    roadAddress: '서울시 강남구 압구정로 10',
+                    lat: 37.527,
+                    lng: 127.028,
+                    category: '다이닝',
+                    district: '강남',
+                    corkageStatus: 'available',
+                    freshnessState: 'fresh',
+                    confidenceLabel: 'medium',
+                    verifiedAt: '2026-05-22',
+                    sourceType: 'user_report_reviewed',
+                    sourceNote: nextReport.reviewNote ?? '',
+                    conditionNote: nextReport.memo,
+                    corkageFee: nextReport.reportedFee,
+                    feeUnit: 'per_bottle',
+                  },
+                ]
+              : [],
+          reviewLogs: [
+            {
+              logId: `log-${nextReport.reportId}`,
+              reportId: nextReport.reportId,
+              reviewState: nextReport.reviewState,
+              reviewNote: nextReport.reviewNote,
+              reviewedAt: nextReport.reviewedAt,
+              appliedAt: nextReport.appliedAt,
+              createdAt: '2026-05-22T00:00:00.000Z',
+              storeMatchType: nextReport.storeMatchType,
+              placeId: nextReport.placeId,
+              storeName: nextReport.storeName,
+            },
+          ],
+        };
+
+        return createJsonResponse(serverState);
+      }
+
+      throw new Error(`Unsupported method: ${method}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('auto-applies canonical overrides when a matched report is accepted', () => {
-    window.localStorage.setItem(
-      'corkage-mvp-report-drafts',
-      JSON.stringify([
-        {
-          reportId: 'draft-test-001',
-          placeId: 'seasonal-noodle-lab',
-          storeName: '테스트 식당',
-          reportType: 'status',
-          reportedStatus: 'available',
-          reportedFee: 12000,
-          memo: '병당 12,000원 제보',
-          submittedAt: '2026-05-18',
-          reviewState: 'pending',
-        },
-      ]),
-    );
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('auto-applies canonical overrides when a matched report is accepted', async () => {
+    serverState.draftReports = [
+      {
+        reportId: 'draft-test-001',
+        storeMatchType: 'existing',
+        placeId: 'seasonal-noodle-lab',
+        storeName: '테스트 식당',
+        reportType: 'status',
+        reportedStatus: 'available',
+        reportedFee: 12000,
+        memo: '병당 12,000원 제보',
+        submittedAt: '2026-05-18',
+        reviewState: 'pending',
+      },
+    ];
 
     render(<ReviewQueue />);
 
-    const draftCard = getDraftCard('테스트 식당');
+    const draftCard = await findDraftCard('테스트 식당');
 
     fireEvent.change(within(draftCard).getByLabelText('검수 상태'), {
       target: { value: 'accepted' },
     });
 
-    const raw = window.localStorage.getItem('corkage-mvp-canonical-overrides');
+    await waitFor(() =>
+      expect(serverState.canonicalOverrides[0]).toMatchObject({
+        placeId: 'seasonal-noodle-lab',
+        sourceType: 'user_report_reviewed',
+      }),
+    );
 
-    expect(raw).not.toBeNull();
-    expect(raw).toContain('seasonal-noodle-lab');
-    expect(raw).toContain('user_report_reviewed');
     expect(within(draftCard).getByText('placeId 매칭 완료')).toBeInTheDocument();
     expect(
       within(draftCard).getByText(/기존 식당 existing · seasonal-noodle-lab/),
@@ -57,33 +152,29 @@ describe('ReviewQueue', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps accepted new restaurant reports as candidates without canonical overrides', () => {
-    window.localStorage.setItem(
-      'corkage-mvp-report-drafts',
-      JSON.stringify([
-        {
-          reportId: 'draft-test-002',
-          storeName: '새 식당 후보',
-          reportType: 'new',
-          reportedStatus: 'available',
-          memo: '신규 후보 제보',
-          submittedAt: '2026-05-18',
-          reviewState: 'pending',
-        },
-      ]),
-    );
+  it('keeps accepted new restaurant reports as candidates without canonical overrides', async () => {
+    serverState.draftReports = [
+      {
+        reportId: 'draft-test-002',
+        storeMatchType: 'candidate',
+        storeName: '새 식당 후보',
+        reportType: 'new',
+        reportedStatus: 'available',
+        memo: '신규 후보 제보',
+        submittedAt: '2026-05-18',
+        reviewState: 'pending',
+      },
+    ];
 
     render(<ReviewQueue />);
 
-    const draftCard = getDraftCard('새 식당 후보');
+    const draftCard = await findDraftCard('새 식당 후보');
 
     fireEvent.change(within(draftCard).getByLabelText('검수 상태'), {
       target: { value: 'accepted' },
     });
 
-    expect(
-      window.localStorage.getItem('corkage-mvp-canonical-overrides'),
-    ).toBeNull();
+    await waitFor(() => expect(serverState.canonicalOverrides).toEqual([]));
     expect(
       within(draftCard).getByText('신규 candidate'),
     ).toBeInTheDocument();
@@ -111,12 +202,22 @@ describe('ReviewQueue', () => {
   });
 });
 
-function getDraftCard(name: string): HTMLElement {
-  const card = screen.getByRole('heading', { name }).closest('.review-card');
+async function findDraftCard(name: string): Promise<HTMLElement> {
+  const heading = await screen.findByRole('heading', { name });
+  const card = heading.closest('.review-card');
 
   if (!card) {
     throw new Error('draft review card not found');
   }
 
   return card as HTMLElement;
+}
+
+function createJsonResponse(data: ServerMvpState, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 }

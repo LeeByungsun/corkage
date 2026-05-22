@@ -11,7 +11,6 @@ import {
 } from '../../lib/repo/corkage-repo';
 import {
   readCanonicalOverrides,
-  saveCanonicalOverride,
 } from '../../lib/repo/canonical-overrides';
 import {
   readDraftReports,
@@ -43,67 +42,107 @@ export function ReviewQueue() {
   const [canonicalOverrides, setCanonicalOverrides] = useState<CorkageStore[]>(
     [],
   );
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [busyReportId, setBusyReportId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    setDraftReports(readDraftReports());
-    setCanonicalOverrides(readCanonicalOverrides());
+    let active = true;
+
+    async function loadReviewState() {
+      try {
+        const [nextDraftReports, nextOverrides] = await Promise.all([
+          readDraftReports(),
+          readCanonicalOverrides(),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setDraftReports(nextDraftReports);
+        setCanonicalOverrides(nextOverrides);
+        setReviewNotes(buildReviewNotes(nextDraftReports));
+      } catch {
+        if (active) {
+          setErrorMessage('서버 목업 저장소에서 검수 큐를 불러오지 못했습니다.');
+        }
+      }
+    }
+
+    void loadReviewState();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const seededReports = useMemo(() => getReports(), []);
   const reports = [...draftReports, ...seededReports];
   const currentStores = mergeStores(getAllStores(), canonicalOverrides);
 
-  function handleReviewChange(report: CorkageReport, reviewState: ReviewState) {
+  async function handleReviewChange(
+    report: CorkageReport,
+    reviewState: ReviewState,
+  ) {
     if (!isDraftReport(report.reportId)) {
       return;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    setBusyReportId(report.reportId);
+    setErrorMessage('');
+
+    const nextReviewNote = reviewNotes[report.reportId] ?? report.reviewNote ?? '';
     const nextReport = transitionReportReviewState(report, reviewState, {
-      reviewNote: report.reviewNote,
-      reviewedAt:
-        reviewState === 'pending' ? undefined : report.reviewedAt ?? today,
+      reviewNote: nextReviewNote,
     });
-    const nextStore =
-      nextReport.reviewState === 'accepted'
-        ? applyCanonicalOverride(nextReport)
-        : null;
 
-    setDraftReports(
-      updateDraftReportReview(report.reportId, {
+    try {
+      const nextDraftReports = await updateDraftReportReview(report.reportId, {
         reviewState: nextReport.reviewState,
-        reviewNote: nextReport.reviewNote,
-        reviewedAt: nextReport.reviewedAt,
-        appliedAt: nextStore ? today : report.appliedAt,
-      }),
-    );
+        reviewNote: nextReviewNote,
+      });
+      const nextOverrides = await readCanonicalOverrides();
 
-    if (nextStore) {
-      setCanonicalOverrides(saveCanonicalOverride(nextStore));
+      setDraftReports(nextDraftReports);
+      setCanonicalOverrides(nextOverrides);
+      setReviewNotes(buildReviewNotes(nextDraftReports));
+    } catch {
+      setErrorMessage('검수 상태를 서버 목업 저장소에 반영하지 못했습니다.');
+    } finally {
+      setBusyReportId(null);
     }
   }
 
-  function handleReviewNoteChange(report: CorkageReport, reviewNote: string) {
+  function handleReviewNoteChange(reportId: string, reviewNote: string) {
+    setReviewNotes((current) => ({
+      ...current,
+      [reportId]: reviewNote,
+    }));
+  }
+
+  async function handleReviewNoteBlur(report: CorkageReport) {
     if (!isDraftReport(report.reportId)) {
       return;
     }
 
-    setDraftReports(
-      updateDraftReportReview(report.reportId, {
-        reviewState: report.reviewState,
-        reviewNote,
-      }),
-    );
+    setBusyReportId(report.reportId);
+    setErrorMessage('');
 
-    if (report.reviewState === 'accepted') {
-      const nextStore = applyCanonicalOverride({
-        ...report,
-        reviewNote,
+    try {
+      const nextReviewNote = reviewNotes[report.reportId] ?? '';
+      const nextDraftReports = await updateDraftReportReview(report.reportId, {
+        reviewNote: nextReviewNote,
       });
+      const nextOverrides = await readCanonicalOverrides();
 
-      if (nextStore) {
-        setCanonicalOverrides(saveCanonicalOverride(nextStore));
-      }
+      setDraftReports(nextDraftReports);
+      setCanonicalOverrides(nextOverrides);
+      setReviewNotes(buildReviewNotes(nextDraftReports));
+    } catch {
+      setErrorMessage('review note를 서버 목업 저장소에 반영하지 못했습니다.');
+    } finally {
+      setBusyReportId(null);
     }
   }
 
@@ -118,22 +157,16 @@ export function ReviewQueue() {
     );
   }
 
-  function applyCanonicalOverride(report: CorkageReport) {
-    return buildCanonicalPreviewFromAcceptedReport(
-      report,
-      getComparableStores(report),
-    )?.nextStore;
-  }
-
   return (
     <section className="page-stack">
       <header className="section-header">
         <p className="eyebrow">내부 검수 큐</p>
         <h1>reviewed canonical 반영 흐름</h1>
         <p>
-          MVP 단계에서는 로컬 목업 저장소에서만 reviewState 전환과 accepted
+          MVP 단계에서는 서버 목업 저장소에서 reviewState 전환과 accepted
           canonical 반영 예시를 관리합니다.
         </p>
+        {errorMessage ? <p role="alert">{errorMessage}</p> : null}
       </header>
 
       <div className="review-grid">
@@ -183,7 +216,7 @@ export function ReviewQueue() {
                 <label>
                   <span>검수 상태</span>
                   <select
-                    disabled={!draft}
+                    disabled={!draft || busyReportId === report.reportId}
                     value={report.reviewState}
                     onChange={(event) =>
                       handleReviewChange(
@@ -203,12 +236,15 @@ export function ReviewQueue() {
                 <label>
                   <span>review note</span>
                   <textarea
-                    disabled={!draft}
+                    disabled={!draft || busyReportId === report.reportId}
                     rows={3}
-                    value={report.reviewNote ?? ''}
+                    value={reviewNotes[report.reportId] ?? report.reviewNote ?? ''}
                     onChange={(event) =>
-                      handleReviewNoteChange(report, event.target.value)
+                      handleReviewNoteChange(report.reportId, event.target.value)
                     }
+                    onBlur={() => {
+                      void handleReviewNoteBlur(report);
+                    }}
                   />
                 </label>
 
@@ -250,6 +286,12 @@ export function ReviewQueue() {
 
 function isDraftReport(reportId: string) {
   return reportId.startsWith('draft-');
+}
+
+function buildReviewNotes(reports: CorkageReport[]) {
+  return Object.fromEntries(
+    reports.map((report) => [report.reportId, report.reviewNote ?? '']),
+  );
 }
 
 function getReviewMatchUi(report: CorkageReport): MatchUi {

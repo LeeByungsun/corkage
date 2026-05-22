@@ -1,12 +1,45 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, vi } from 'vitest';
 import { ReportForm } from './ReportForm';
+import type { ServerMvpState } from '../../lib/types/corkage';
 
 describe('ReportForm', () => {
+  let serverState: ServerMvpState;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
-    window.localStorage.clear();
+    serverState = {
+      draftReports: [],
+      canonicalOverrides: [],
+      reviewLogs: [],
+    };
+    fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+
+      if (method === 'GET') {
+        return createJsonResponse(serverState);
+      }
+
+      if (method === 'POST') {
+        const body = JSON.parse(String(init?.body ?? '{}'));
+        serverState = {
+          ...serverState,
+          draftReports: [body.report, ...serverState.draftReports],
+        };
+
+        return createJsonResponse(serverState, 201);
+      }
+
+      throw new Error(`Unsupported method: ${method}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('stores matched existing restaurant reports with an explicit placeId', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('stores matched existing restaurant reports with an explicit placeId', async () => {
     render(<ReportForm />);
 
     fireEvent.change(screen.getByLabelText('기존 식당 연결'), {
@@ -18,21 +51,21 @@ describe('ReportForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '제보 초안 저장' }));
 
-    const savedReports = JSON.parse(
-      window.localStorage.getItem('corkage-mvp-report-drafts') ?? '[]',
+    await waitFor(() =>
+      expect(serverState.draftReports[0]).toMatchObject({
+        storeMatchType: 'existing',
+        placeId: 'seasonal-noodle-lab',
+        reportType: 'status',
+        reviewState: 'pending',
+        storeName: '시즈널 누들랩',
+      }),
     );
-    const status = screen.getByRole('status');
 
-    expect(savedReports[0]).toMatchObject({
-      storeMatchType: 'existing',
-      placeId: 'seasonal-noodle-lab',
-      reportType: 'status',
-      reviewState: 'pending',
-      storeName: '시즈널 누들랩',
-    });
+    const status = await screen.findByRole('status');
+
     expect(status).toHaveTextContent('임시 저장 완료');
     expect(status).toHaveTextContent(
-      '시즈널 누들랩 제보 초안을 브라우저에서 확인했습니다.',
+      '시즈널 누들랩 제보 초안을 서버 목업 저장소에 저장했습니다.',
     );
     expect(status).toHaveTextContent('placeId 매칭 완료');
     expect(status).toHaveTextContent(
@@ -49,7 +82,7 @@ describe('ReportForm', () => {
     expect(screen.getByText('검수 대기')).toBeInTheDocument();
   });
 
-  it('keeps new restaurant reports as candidates without a placeId', () => {
+  it('keeps new restaurant reports as candidates without a placeId', async () => {
     render(<ReportForm />);
 
     fireEvent.change(screen.getByLabelText('기존 식당 연결'), {
@@ -64,20 +97,28 @@ describe('ReportForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '제보 초안 저장' }));
 
-    const savedReports = JSON.parse(
-      window.localStorage.getItem('corkage-mvp-report-drafts') ?? '[]',
+    await waitFor(() =>
+      expect(serverState.draftReports[0]).toMatchObject({
+        storeMatchType: 'candidate',
+        reportType: 'new',
+        reviewState: 'pending',
+        storeName: '새 식당',
+      }),
     );
 
-    expect(savedReports[0]).toMatchObject({
-      storeMatchType: 'candidate',
-      reportType: 'new',
-      reviewState: 'pending',
-      storeName: '새 식당',
-    });
-    expect(savedReports[0].placeId).toBeUndefined();
+    expect(serverState.draftReports[0]?.placeId).toBeUndefined();
     expect(screen.getAllByText('신규 식당 candidate').length).toBeGreaterThan(0);
     expect(
       screen.getByText('placeId 미연결 · canonical 반영 불가'),
     ).toBeInTheDocument();
   });
 });
+
+function createJsonResponse(data: ServerMvpState, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}

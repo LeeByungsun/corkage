@@ -38,10 +38,32 @@ export function ReportForm() {
   const [selectedPlaceId, setSelectedPlaceId] = useState('');
   const [submitted, setSubmitted] = useState<DraftState | null>(null);
   const [localReports, setLocalReports] = useState<CorkageReport[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const currentStores = useCanonicalStores();
 
   useEffect(() => {
-    setLocalReports(readDraftReports());
+    let active = true;
+
+    async function loadDraftReports() {
+      try {
+        const nextReports = await readDraftReports();
+
+        if (active) {
+          setLocalReports(nextReports);
+        }
+      } catch {
+        if (active) {
+          setErrorMessage('서버 저장소에서 제보 초안을 불러오지 못했습니다.');
+        }
+      }
+    }
+
+    void loadDraftReports();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -72,10 +94,13 @@ export function ReportForm() {
     [currentStores, seededReports],
   );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setErrorMessage('');
+    setIsSubmitting(true);
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const matchedPlaceId = String(form.get('placeId') ?? '').trim();
     const selectedStore =
       currentStores.find((store) => store.placeId === matchedPlaceId) ?? null;
@@ -95,6 +120,7 @@ export function ReportForm() {
     };
 
     if (nextStoreMatchType === 'existing' && !selectedStore) {
+      setIsSubmitting(false);
       return;
     }
 
@@ -121,10 +147,18 @@ export function ReportForm() {
           : '신규 candidate 제보가 로컬 목업 저장소에 저장됨',
     };
 
-    setSubmitted(nextState);
-    setLocalReports(saveDraftReport(nextReport));
-    event.currentTarget.reset();
-    setSelectedPlaceId('');
+    try {
+      const nextReports = await saveDraftReport(nextReport);
+
+      setSubmitted(nextState);
+      setLocalReports(nextReports);
+      formElement.reset();
+      setSelectedPlaceId('');
+    } catch {
+      setErrorMessage('제보 초안을 서버 목업 저장소에 저장하지 못했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -211,22 +245,24 @@ export function ReportForm() {
         </label>
 
         <button className="primary-button" type="submit">
-          제보 초안 저장
+          {isSubmitting ? '저장 중...' : '제보 초안 저장'}
         </button>
       </form>
 
       <aside className="info-panel">
         <h2>현재 단계 안내</h2>
         <ul>
-          <li>제보는 아직 서버에 저장되지 않습니다.</li>
+          <li>제보는 서버 목업 저장소에 저장됩니다.</li>
           <li>운영 검수 전에는 canonical 데이터가 바뀌지 않습니다.</li>
           <li>비용과 조건은 매장 확인 후 보수적으로 공개합니다.</li>
         </ul>
 
+        {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+
         {submitted ? (
           <div className="submission-card" role="status">
             <h3>임시 저장 완료</h3>
-            <p>{submitted.storeName} 제보 초안을 브라우저에서 확인했습니다.</p>
+            <p>{submitted.storeName} 제보 초안을 서버 목업 저장소에 저장했습니다.</p>
             <p className="eyebrow">{submitted.matchBadge}</p>
             <p>{submitted.matchSummary}</p>
             <p className="muted">{submitted.matchNote}</p>
@@ -235,7 +271,7 @@ export function ReportForm() {
                 ? '기존 식당 연결 · canonical 반영 가능'
                 : '신규 candidate · canonical 반영 불가'}
             </p>
-            <p>현재는 로컬 목업 저장소에 `pending` 상태로 저장됩니다.</p>
+            <p>현재는 서버 목업 저장소에 `pending` 상태로 저장됩니다.</p>
             <pre>{submitted.memo || '메모 없음'}</pre>
           </div>
         ) : null}
@@ -243,8 +279,8 @@ export function ReportForm() {
 
       <section className="review-panel">
         <div className="review-panel__section">
-          <h2>로컬 제보 저장 상태</h2>
-          <p className="muted">이 제보들은 브라우저 로컬 저장소에만 유지됩니다.</p>
+          <h2>서버 제보 저장 상태</h2>
+          <p className="muted">이 제보들은 서버 목업 저장소에서 불러옵니다.</p>
           {localReports.length === 0 ? (
             <p className="muted">아직 저장된 제보가 없습니다.</p>
           ) : (

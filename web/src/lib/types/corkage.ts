@@ -84,3 +84,28 @@ export type CanonicalPreview = {
   nextStore: CorkageStore;
   changes: CanonicalFieldChange[];
 };
+
+export type DraftReportReviewUpdate = {
+  reviewState?: ReviewState;
+  reviewNote?: string;
+  reviewedAt?: string;
+};
+
+export type ReviewLogEntry = {
+  logId: string;
+  reportId: string;
+  reviewState: ReviewState;
+  reviewNote?: string;
+  reviewedAt?: string;
+  appliedAt?: string;
+  createdAt: string;
+  storeMatchType: ReportStoreMatchType;
+  placeId?: string;
+  storeName: string;
+};
+
+export type ServerMvpState = {
+  draftReports: CorkageReport[];
+  canonicalOverrides: CorkageStore[];
+  reviewLogs: ReviewLogEntry[];
+};
