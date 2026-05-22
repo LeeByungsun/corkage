@@ -3,9 +3,17 @@ import { StoreCard } from './StoreCard';
 
 type StoreListProps = {
   stores: StoreWithDistance[];
+  nearestStorePlaceId: string | null;
+  onSelectPlaceId: (placeId: string) => void;
+  selectedPlaceId: string | null;
 };
 
-export function StoreList({ stores }: StoreListProps) {
+export function StoreList({
+  stores,
+  nearestStorePlaceId,
+  onSelectPlaceId,
+  selectedPlaceId,
+}: StoreListProps) {
   if (stores.length === 0) {
     return (
       <section className="empty-state">
@@ -18,7 +26,13 @@ export function StoreList({ stores }: StoreListProps) {
   return (
     <section className="store-grid">
       {stores.map((store) => (
-        <StoreCard key={store.placeId} store={store} />
+        <StoreCard
+          key={store.placeId}
+          isNearest={store.placeId === nearestStorePlaceId}
+          onSelect={() => onSelectPlaceId(store.placeId)}
+          selected={store.placeId === selectedPlaceId}
+          store={store}
+        />
       ))}
     </section>
   );

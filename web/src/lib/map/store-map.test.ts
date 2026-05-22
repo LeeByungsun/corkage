@@ -1,5 +1,6 @@
 import {
   attachDistanceToStores,
+  filterStoresByMapBounds,
   filterStoresByRadius,
   getDistanceKmLabel,
   getGeoDistanceMeters,
@@ -93,6 +94,24 @@ describe('store-map helpers', () => {
       }),
       1000,
     );
+
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.placeId).toBe('seoul-vin-table');
+  });
+
+  it('filters stores by current map bounds without mutating marker source data', () => {
+    const first = getStoreById('seoul-vin-table');
+    const second = getStoreById('han-river-grill');
+
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+
+    const filtered = filterStoresByMapBounds([first!, second!], {
+      north: 37.54,
+      south: 37.52,
+      east: 127.06,
+      west: 127.04,
+    });
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.placeId).toBe('seoul-vin-table');

@@ -1,8 +1,7 @@
 'use client';
 
-'use client';
-
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   filterStoreList,
   listDistrictsFromStores,
@@ -13,9 +12,11 @@ import { StoreMap } from './StoreMap';
 import { StoreList } from './StoreList';
 import {
   attachDistanceToStores,
+  filterStoresByMapBounds,
   filterStoresByRadius,
   sortStoresByDistance,
   type GeoPoint,
+  type MapBounds,
 } from '../../lib/map/store-map';
 
 const STATUS_OPTIONS: Array<{ value: StoreFilterStatus; label: string }> = [
@@ -39,25 +40,45 @@ const RADIUS_OPTIONS = [
   { value: '10000', label: '10km' },
 ] as const;
 
+type SortMode = (typeof SORT_OPTIONS)[number]['value'];
+type RadiusMode = (typeof RADIUS_OPTIONS)[number]['value'];
+
 type StoreExplorerProps = {
   status: string;
   district: string;
   maxFeeInput: string;
+  initialSort?: string;
+  initialRadius?: string;
+  initialSelectedPlaceId?: string;
 };
 
 export function StoreExplorer({
   status,
   district,
   maxFeeInput,
+  initialSort = 'default',
+  initialRadius = 'all',
+  initialSelectedPlaceId = '',
 }: StoreExplorerProps) {
   const stores = useCanonicalStores();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [currentLocation, setCurrentLocation] = useState<GeoPoint | null>(null);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
-  const [sortMode, setSortMode] =
-    useState<(typeof SORT_OPTIONS)[number]['value']>('default');
-  const [radiusFilter, setRadiusFilter] =
-    useState<(typeof RADIUS_OPTIONS)[number]['value']>('all');
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(
+    initialSelectedPlaceId || null,
+  );
+  const [sortMode, setSortMode] = useState<SortMode>(
+    isSortMode(initialSort) ? initialSort : 'default',
+  );
+  const [radiusFilter, setRadiusFilter] = useState<RadiusMode>(
+    isRadiusMode(initialRadius) ? initialRadius : 'all',
+  );
+  const hydratedRef = useRef(false);
+
   const maxFee = Number(maxFeeInput);
   const districts = listDistrictsFromStores(stores);
   const baseFilteredStores = filterStoreList(stores, {
@@ -69,19 +90,29 @@ export function StoreExplorer({
     () => attachDistanceToStores(baseFilteredStores, currentLocation),
     [baseFilteredStores, currentLocation],
   );
-  const radiusMeters =
-    radiusFilter === 'all' ? undefined : Number(radiusFilter);
+  const radiusMeters = radiusFilter === 'all' ? undefined : Number(radiusFilter);
   const radiusFilteredStores = useMemo(
     () => filterStoresByRadius(storesWithDistance, radiusMeters),
     [radiusMeters, storesWithDistance],
   );
-  const visibleStores = useMemo(() => {
+  const sortedStores = useMemo(() => {
     if (sortMode === 'distance' && currentLocation) {
       return sortStoresByDistance(radiusFilteredStores);
     }
 
     return radiusFilteredStores;
   }, [currentLocation, radiusFilteredStores, sortMode]);
+  const visibleStores = useMemo(
+    () => filterStoresByMapBounds(sortedStores, mapBounds),
+    [mapBounds, sortedStores],
+  );
+  const nearestStorePlaceId = useMemo(() => {
+    if (!currentLocation) {
+      return null;
+    }
+
+    return sortStoresByDistance(radiusFilteredStores)[0]?.placeId ?? null;
+  }, [currentLocation, radiusFilteredStores]);
 
   function handleRequestCurrentLocation() {
     if (!navigator.geolocation) {
@@ -119,6 +150,49 @@ export function StoreExplorer({
     }
 
     setCurrentLocation({ ...currentLocation });
+  }
+
+
+  useEffect(() => {
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (sortMode === 'default') {
+      params.delete('sort');
+    } else {
+      params.set('sort', sortMode);
+    }
+
+    if (radiusFilter === 'all') {
+      params.delete('radius');
+    } else {
+      params.set('radius', radiusFilter);
+    }
+
+    if (!selectedPlaceId) {
+      params.delete('selected');
+    } else {
+      params.set('selected', selectedPlaceId);
+    }
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, radiusFilter, router, searchParams, selectedPlaceId, sortMode]);
+
+  function handleSelectPlaceId(placeId: string) {
+    setSelectedPlaceId(placeId);
+  }
+
+  function handleChangeSortMode(nextSortMode: SortMode) {
+    setSortMode(nextSortMode);
+  }
+
+  function handleChangeRadiusFilter(nextRadiusFilter: RadiusMode) {
+    setRadiusFilter(nextRadiusFilter);
   }
 
   return (
@@ -161,12 +235,9 @@ export function StoreExplorer({
           <span>정렬</span>
           <select
             aria-label="정렬"
+            name="sort"
             value={sortMode}
-            onChange={(event) =>
-              setSortMode(
-                event.target.value as (typeof SORT_OPTIONS)[number]['value'],
-              )
-            }
+            onChange={(event) => handleChangeSortMode(event.target.value as SortMode)}
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -180,11 +251,10 @@ export function StoreExplorer({
           <span>반경</span>
           <select
             aria-label="반경"
+            name="radius"
             value={radiusFilter}
             onChange={(event) =>
-              setRadiusFilter(
-                event.target.value as (typeof RADIUS_OPTIONS)[number]['value'],
-              )
+              handleChangeRadiusFilter(event.target.value as RadiusMode)
             }
             disabled={!currentLocation}
           >
@@ -204,15 +274,23 @@ export function StoreExplorer({
       <p className="helper-text">{visibleStores.length}개 결과</p>
 
       <StoreMap
-        stores={visibleStores}
+        stores={sortedStores}
         currentLocation={currentLocation}
         locationError={locationError}
         locationLoading={locationLoading}
         onRequestCurrentLocation={handleRequestCurrentLocation}
         onMoveToCurrentLocation={handleMoveToCurrentLocation}
+        selectedPlaceId={selectedPlaceId}
+        onSelectPlaceId={handleSelectPlaceId}
+        onBoundsChange={setMapBounds}
       />
 
-      <StoreList stores={visibleStores} />
+      <StoreList
+        stores={visibleStores}
+        nearestStorePlaceId={nearestStorePlaceId}
+        onSelectPlaceId={handleSelectPlaceId}
+        selectedPlaceId={selectedPlaceId}
+      />
     </>
   );
 }
@@ -228,4 +306,12 @@ function getLocationErrorMessage(error: GeolocationPositionError) {
     default:
       return '현재 위치 확인에 실패했습니다.';
   }
+}
+
+function isSortMode(value: string): value is SortMode {
+  return SORT_OPTIONS.some((option) => option.value === value);
+}
+
+function isRadiusMode(value: string): value is RadiusMode {
+  return RADIUS_OPTIONS.some((option) => option.value === value);
 }

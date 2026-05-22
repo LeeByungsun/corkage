@@ -6,6 +6,14 @@ let naverMapsPromise: Promise<NaverMapsSdk> | null = null;
 
 export type NaverMapsSdk = {
   maps: {
+    Event: {
+      addListener: (
+        target: object,
+        eventName: string,
+        listener: (...args: unknown[]) => void,
+      ) => { remove?: () => void };
+      removeListener: (listener: { remove?: () => void }) => void;
+    };
     Map: new (
       element: HTMLElement | string,
       options?: Record<string, unknown>,
@@ -17,6 +25,12 @@ export type NaverMapsSdk = {
 
 type NaverMapInstance = {
   fitBounds: (coords: unknown[], options?: Record<string, unknown>) => void;
+  getBounds: () => {
+    north: () => number;
+    south: () => number;
+    east: () => number;
+    west: () => number;
+  };
   setCenter: (coord: unknown) => void;
   setZoom: (zoom: number) => void;
   destroy?: () => void;

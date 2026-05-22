@@ -5,6 +5,9 @@ type StorePageProps = {
     status?: string;
     district?: string;
     maxFee?: string;
+    sort?: string;
+    radius?: string;
+    selected?: string;
   };
 };
 
@@ -12,6 +15,9 @@ export default function StorePage({ searchParams }: StorePageProps) {
   const status = searchParams?.status ?? 'all';
   const district = searchParams?.district ?? 'all';
   const maxFeeInput = searchParams?.maxFee ?? '';
+  const sort = searchParams?.sort ?? 'default';
+  const radius = searchParams?.radius ?? 'all';
+  const selected = searchParams?.selected ?? '';
 
   return (
     <section className="page-stack">
@@ -26,6 +32,9 @@ export default function StorePage({ searchParams }: StorePageProps) {
 
       <StoreExplorer
         district={district}
+        initialRadius={radius}
+        initialSelectedPlaceId={selected}
+        initialSort={sort}
         maxFeeInput={maxFeeInput}
         status={status}
       />

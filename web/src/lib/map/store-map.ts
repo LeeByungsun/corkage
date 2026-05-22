@@ -5,6 +5,13 @@ export type GeoPoint = {
   lng: number;
 };
 
+export type MapBounds = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
 export type StoreMapPoint = {
   placeId: string;
   name: string;
@@ -117,6 +124,22 @@ export function filterStoresByRadius(
   );
 }
 
+export function filterStoresByMapBounds(
+  stores: StoreWithDistance[],
+  bounds: MapBounds | null,
+) {
+  if (!bounds) {
+    return stores;
+  }
+
+  return stores.filter(
+    (store) =>
+      store.lat >= bounds.south &&
+      store.lat <= bounds.north &&
+      isLngWithinBounds(store.lng, bounds),
+  );
+}
+
 export function getDistanceKmLabel(distanceMeters?: number) {
   if (distanceMeters === undefined) {
     return null;
@@ -131,4 +154,12 @@ export function getDistanceKmLabel(distanceMeters?: number) {
 
 function toRadians(value: number) {
   return (value * Math.PI) / 180;
+}
+
+function isLngWithinBounds(lng: number, bounds: MapBounds) {
+  if (bounds.west <= bounds.east) {
+    return lng >= bounds.west && lng <= bounds.east;
+  }
+
+  return lng >= bounds.west || lng <= bounds.east;
 }
