@@ -1,8 +1,8 @@
-import type { CorkageStore } from '../../lib/types/corkage';
+import type { StoreWithDistance } from '../../lib/map/store-map';
 import { StoreCard } from './StoreCard';
 
 type StoreListProps = {
-  stores: CorkageStore[];
+  stores: StoreWithDistance[];
 };
 
 export function StoreList({ stores }: StoreListProps) {

@@ -28,7 +28,16 @@ describe('StoreMap', () => {
 
     expect(store).toBeDefined();
 
-    render(<StoreMap stores={[store!]} />);
+    render(
+      <StoreMap
+        stores={[store!]}
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+      />,
+    );
 
     expect(
       screen.getByText('지도 키를 아직 연결하지 않았습니다.'),
@@ -42,7 +51,17 @@ describe('StoreMap', () => {
   });
 
   it('shows an empty-state message when there are no map points', () => {
-    render(<StoreMap stores={[]} clientId="test-client-id" />);
+    render(
+      <StoreMap
+        stores={[]}
+        clientId="test-client-id"
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+      />,
+    );
 
     expect(
       screen.getByText('지도에 표시할 좌표가 아직 없습니다.'),
@@ -81,7 +100,17 @@ describe('StoreMap', () => {
 
     expect(store).toBeDefined();
 
-    render(<StoreMap stores={[store!]} clientId="test-client-id" />);
+    render(
+      <StoreMap
+        stores={[store!]}
+        clientId="test-client-id"
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+      />,
+    );
 
     await waitFor(() =>
       expect(loadNaverMaps).toHaveBeenCalledWith('test-client-id'),

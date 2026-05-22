@@ -4,15 +4,19 @@ import {
   getFeeLabel,
   getVisibilityNote,
 } from '../../lib/repo/corkage-repo';
+import { getDistanceKmLabel } from '../../lib/map/store-map';
 import type { CorkageStore } from '../../lib/types/corkage';
 import { TrustBadge } from './TrustBadge';
 
 type StoreCardProps = {
-  store: CorkageStore;
+  store: CorkageStore & {
+    distanceMeters?: number;
+  };
 };
 
 export function StoreCard({ store }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
+  const distanceLabel = getDistanceKmLabel(store.distanceMeters);
 
   return (
     <article className="card">
@@ -42,6 +46,12 @@ export function StoreCard({ store }: StoreCardProps) {
           <dt>최신 확인</dt>
           <dd>{store.verifiedAt}</dd>
         </div>
+        {distanceLabel ? (
+          <div>
+            <dt>현재 위치 기준</dt>
+            <dd>{distanceLabel}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <p className="card__notice">{getVisibilityNote(store)}</p>
