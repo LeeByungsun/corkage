@@ -20,7 +20,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
               Corkage MVP
             </a>
             <nav>
-              <a href="/store">리스트</a>
+              <a href="/store">지도/리스트</a>
               <a href="/report">제보</a>
               <a href="/review">검수 큐</a>
             </nav>
