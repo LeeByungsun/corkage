@@ -11,6 +11,18 @@ import {
 } from '../../lib/map/store-map';
 import { loadNaverMaps } from '../../lib/map/naver-maps-loader';
 
+type MarkerInstance = {
+  setMap: (map: null) => void;
+  setIcon?: (icon: MarkerIcon) => void;
+  setZIndex?: (zIndex: number) => void;
+};
+
+type MarkerIcon = {
+  content: string;
+  size: { width: number; height: number };
+  anchor: { x: number; y: number };
+};
+
 type StoreMapProps = {
   stores: StoreWithDistance[];
   currentLocation: GeoPoint | null;
@@ -68,10 +80,29 @@ export function StoreMap({
     destroy?: () => void;
   } | null>(null);
   const naverRef = useRef<Awaited<ReturnType<typeof loadNaverMaps>> | null>(null);
+  const markerInstancesRef = useRef<Map<string, MarkerInstance>>(new Map());
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  const onSelectPlaceIdRef = useRef(onSelectPlaceId);
+  const selectedPlaceIdRef = useRef(selectedPlaceId);
+  const nearestPlaceIdRef = useRef(nearestPlaceId);
+
+  useEffect(() => {
+    onBoundsChangeRef.current = onBoundsChange;
+  }, [onBoundsChange]);
+
+  useEffect(() => {
+    onSelectPlaceIdRef.current = onSelectPlaceId;
+  }, [onSelectPlaceId]);
+
+  useEffect(() => {
+    selectedPlaceIdRef.current = selectedPlaceId;
+    nearestPlaceIdRef.current = nearestPlaceId;
+  }, [nearestPlaceId, selectedPlaceId]);
 
   useEffect(() => {
     if (!clientId || !mapRef.current || points.length === 0) {
-      onBoundsChange(null);
+      markerInstancesRef.current = new Map();
+      onBoundsChangeRef.current(null);
       return;
     }
 
@@ -79,8 +110,9 @@ export function StoreMap({
 
     let destroyed = false;
     const markerListeners: Array<{ remove?: () => void }> = [];
-    const markerInstances: Array<{ setMap: (map: null) => void }> = [];
-    let currentLocationMarker: { setMap: (map: null) => void } | null = null;
+    const markerInstances: MarkerInstance[] = [];
+    const markerInstanceMap = new Map<string, MarkerInstance>();
+    let currentLocationMarker: MarkerInstance | null = null;
     let boundsListener: { remove?: () => void } | null = null;
 
     async function mountMap() {
@@ -107,15 +139,25 @@ export function StoreMap({
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(point.lat, point.lng),
             map: mapInstance,
+            icon: createMarkerIcon(point.name, {
+              selected: selectedPlaceIdRef.current === point.placeId,
+              nearest: nearestPlaceIdRef.current === point.placeId,
+            }),
             title: point.name,
+            zIndex: getMarkerZIndex({
+              selected: selectedPlaceIdRef.current === point.placeId,
+              nearest: nearestPlaceIdRef.current === point.placeId,
+            }),
           });
+          markerInstanceMap.set(point.placeId, marker);
           markerInstances.push(marker);
           markerListeners.push(
             naver.maps.Event.addListener(marker, 'click', () => {
-              onSelectPlaceId(point.placeId);
+              onSelectPlaceIdRef.current(point.placeId);
             }),
           );
         }
+        markerInstancesRef.current = markerInstanceMap;
 
         if (currentLocation) {
           currentLocationMarker = new naver.maps.Marker({
@@ -154,7 +196,7 @@ export function StoreMap({
           if (destroyed) {
             return;
           }
-          onBoundsChange(toPlainMapBounds(mapInstance.getBounds()));
+          onBoundsChangeRef.current(toPlainMapBounds(mapInstance.getBounds()));
         };
 
         emitBounds();
@@ -182,11 +224,28 @@ export function StoreMap({
       markerListeners.forEach((listener) => listener.remove?.());
       markerInstances.forEach((marker) => marker.setMap(null));
       currentLocationMarker?.setMap(null);
+      markerInstancesRef.current = new Map();
       mapInstanceRef.current?.destroy?.();
       mapInstanceRef.current = null;
       naverRef.current = null;
     };
-  }, [center, clientId, currentLocation, onBoundsChange, onSelectPlaceId, points]);
+  }, [center, clientId, currentLocation, points]);
+
+  useEffect(() => {
+    for (const point of points) {
+      const marker = markerInstancesRef.current.get(point.placeId);
+
+      if (!marker) {
+        continue;
+      }
+
+      const selected = selectedPlaceId === point.placeId;
+      const nearest = nearestPlaceId === point.placeId;
+
+      marker.setIcon?.(createMarkerIcon(point.name, { selected, nearest }));
+      marker.setZIndex?.(getMarkerZIndex({ selected, nearest }));
+    }
+  }, [nearestPlaceId, points, selectedPlaceId]);
 
   useEffect(() => {
     if (!currentLocation || !mapInstanceRef.current || !naverRef.current) {
@@ -457,4 +516,92 @@ function toPlainMapBounds(bounds: {
     east: bounds.east(),
     west: bounds.west(),
   };
+}
+
+function createMarkerIcon(
+  name: string,
+  {
+    selected,
+    nearest,
+  }: {
+    selected: boolean;
+    nearest: boolean;
+  },
+): MarkerIcon {
+  const badgeLabel = selected && nearest
+    ? '선택 · 가장 가까움'
+    : selected
+      ? '선택'
+      : nearest
+        ? '가장 가까움'
+        : '';
+  const badgeMarkup = badgeLabel
+    ? `<span style="${[
+        'display:inline-flex',
+        'align-items:center',
+        'justify-content:center',
+        'max-width:92px',
+        'padding:4px 8px',
+        'border-radius:999px',
+        `background:${selected ? '#7b3f00' : 'rgba(123, 63, 0, 0.12)'}`,
+        `color:${selected ? '#fffaf3' : '#5e2f00'}`,
+        `border:1px solid ${selected ? '#7b3f00' : 'rgba(123, 63, 0, 0.28)'}`,
+        'font-size:11px',
+        'font-weight:700',
+        'line-height:1',
+        'box-shadow:0 6px 16px rgba(94, 47, 0, 0.16)',
+        'white-space:nowrap',
+      ].join(';')}">${badgeLabel}</span>`
+    : '';
+  const markerFill = selected ? '#7b3f00' : '#fffaf3';
+  const markerBorder = selected
+    ? '#7b3f00'
+    : nearest
+      ? '#c06135'
+      : 'rgba(123, 63, 0, 0.28)';
+  const markerText = selected ? '#fffaf3' : '#5e2f00';
+  const halo = selected || nearest
+    ? `box-shadow:0 0 0 4px ${selected ? 'rgba(192, 97, 53, 0.18)' : 'rgba(123, 63, 0, 0.12)'},0 10px 24px rgba(94, 47, 0, 0.18);`
+    : 'box-shadow:0 8px 18px rgba(94, 47, 0, 0.12);';
+
+  return {
+    content: `
+      <div aria-label="${escapeHtml(name)} 지도 마커" style="transform:translate(-50%, -100%);display:flex;flex-direction:column;align-items:center;gap:6px;">
+        ${badgeMarkup}
+        <div style="position:relative;width:36px;height:36px;border-radius:999px 999px 999px 0;background:${markerFill};border:2px solid ${markerBorder};transform:rotate(-45deg);${halo}">
+          <div style="position:absolute;inset:7px;border-radius:999px;background:${selected ? 'rgba(255, 250, 243, 0.22)' : 'rgba(123, 63, 0, 0.08)'};"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%, -50%) rotate(45deg);width:10px;height:10px;border-radius:999px;background:${markerText};"></div>
+        </div>
+      </div>
+    `.trim(),
+    size: { width: 92, height: badgeLabel ? 64 : 44 },
+    anchor: { x: 18, y: 36 },
+  };
+}
+
+function getMarkerZIndex({
+  selected,
+  nearest,
+}: {
+  selected: boolean;
+  nearest: boolean;
+}) {
+  if (selected) {
+    return 30;
+  }
+
+  if (nearest) {
+    return 20;
+  }
+
+  return 10;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }
