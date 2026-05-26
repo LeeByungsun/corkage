@@ -129,6 +129,9 @@ describe('StoreExplorer', () => {
     expect(
       screen.getByLabelText('현재 위치 기준 가장 가까운 식당'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: '가까운 식당' }).closest('article'),
+    ).toHaveClass('card--nearest');
   });
 
   it('applies radius filter after current location is available', async () => {
@@ -159,6 +162,7 @@ describe('StoreExplorer', () => {
 
     const farCard = screen.getByRole('heading', { name: '먼 식당' }).closest('article');
     expect(farCard).not.toBeNull();
+    expect(farCard).toHaveClass('card--selected');
     expect(within(farCard as HTMLElement).getByRole('button', { name: '먼 식당 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: '가까운 식당 카드 선택' }));
