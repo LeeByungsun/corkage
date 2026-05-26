@@ -52,7 +52,7 @@ function setupLiveMapMocks({
     };
   });
   const markerInstances: MockMarkerInstance[] = [];
-  const markerConstructor = vi.fn(function MarkerMock() {
+  const markerConstructor = vi.fn(function MarkerMock(_options?: MockMarkerOptions) {
     const marker = {
       setIcon: vi.fn(),
       setMap: vi.fn(),
