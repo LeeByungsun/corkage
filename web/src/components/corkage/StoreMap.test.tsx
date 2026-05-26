@@ -59,7 +59,8 @@ describe('StoreMap', () => {
       />,
     );
 
-    const selectedButton = screen.getByRole('button', { name: '빈테이블 청담 마커 선택' });
+    expect(screen.getByText('선택한 식당')).toBeInTheDocument();
+    expect(screen.getByText('현재 위치 기준 250m')).toBeInTheDocument();
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('선택한 식당')).toBeInTheDocument();
