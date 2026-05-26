@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { StoreMap } from './StoreMap';
 import { getStoreById } from '../../lib/repo/corkage-repo';
@@ -248,9 +248,11 @@ describe('StoreMap', () => {
     await waitFor(() => expect(loadNaverMaps).toHaveBeenCalledWith('test-client-id'));
 
     const selectedButton = screen.getByRole('button', { name: '가까운 식당 마커 선택' });
+    const selectedSummary = screen.getByText('선택한 식당').closest('.map-selection-card');
 
     expect(screen.getByText('선택한 식당')).toBeInTheDocument();
-    expect(screen.getByText('가까운 식당')).toBeInTheDocument();
+    expect(selectedSummary).not.toBeNull();
+    expect(within(selectedSummary as HTMLElement).getByText('가까운 식당')).toBeInTheDocument();
     expect(selectedButton).toHaveClass('map-point-button--selected');
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
   });
