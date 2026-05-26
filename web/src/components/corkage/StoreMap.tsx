@@ -42,6 +42,10 @@ export function StoreMap({
     () => new Map(stores.map((store) => [store.placeId, store] as const)),
     [stores],
   );
+  const selectedStore = useMemo(
+    () => (selectedPlaceId ? storeMap.get(selectedPlaceId) ?? null : null),
+    [selectedPlaceId, storeMap],
+  );
   const center = useMemo(() => getStoreMapCenter(points), [points]);
   const [loadError, setLoadError] = useState('');
   const mapInstanceRef = useRef<{
@@ -255,6 +259,12 @@ export function StoreMap({
               현재 위치 · {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
             </p>
           ) : null}
+          {selectedStore ? (
+            <div className="map-selection-card map-selection-card--selected">
+              <strong>선택한 식당</strong>
+              <span>{selectedStore.name}</span>
+            </div>
+          ) : null}
           <PointList
             points={points}
             selectedPlaceId={selectedPlaceId}
@@ -274,6 +284,12 @@ export function StoreMap({
                 <span className="muted">
                   {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
                 </span>
+              </div>
+            ) : null}
+            {selectedStore ? (
+              <div className="map-selection-card map-selection-card--selected">
+                <strong>선택한 식당</strong>
+                <span>{selectedStore.name}</span>
               </div>
             ) : null}
             <PointList
@@ -318,7 +334,11 @@ function PointList({
             <button
               aria-label={`${point.name} 마커 선택`}
               aria-pressed={selected}
-              className="map-point-button"
+              className={
+                selected
+                  ? 'map-point-button map-point-button--selected'
+                  : 'map-point-button'
+              }
               onClick={() => onSelectPlaceId(point.placeId)}
               type="button"
             >

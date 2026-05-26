@@ -25,7 +25,11 @@ export function StoreCard({
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
-  const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
+  const cardClassName = [
+    'card',
+    selected ? 'card--selected' : null,
+    isNearest ? 'card--nearest' : null,
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -82,7 +86,11 @@ export function StoreCard({
         <button
           aria-label={`${store.name} 카드 선택`}
           aria-pressed={selected}
-          className={selected ? 'primary-button' : 'secondary-button'}
+          className={
+            selected
+              ? 'primary-button card__select-button card__select-button--selected'
+              : 'secondary-button card__select-button'
+          }
           onClick={onSelect}
           type="button"
         >

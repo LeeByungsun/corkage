@@ -282,6 +282,13 @@ main {
   box-shadow: 0 0 0 2px rgba(192, 97, 53, 0.14);
 }
 
+.card--selected {
+  background: linear-gradient(180deg, #fffdf9 0%, #fff6ec 100%);
+  box-shadow:
+    0 0 0 2px rgba(192, 97, 53, 0.14),
+    0 18px 56px rgba(123, 63, 0, 0.12);
+}
+
 .map-point-button {
   display: grid;
   gap: 0.2rem;
@@ -295,8 +302,16 @@ main {
   cursor: pointer;
 }
 
+.map-point-button--selected {
+  background: rgba(123, 63, 0, 0.08);
+}
+
 .map-point-button strong {
   color: var(--text);
+}
+
+.map-point-button--selected strong {
+  color: var(--accent-strong);
 }
 
 .map-point-button__hint {
@@ -311,6 +326,11 @@ main {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
+}
+
+.map-selection-card--selected {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #fffdf9 0%, #fff3e5 100%);
 }
 
 .review-panel__section {
@@ -340,7 +360,14 @@ main {
   box-shadow: 0 18px 56px rgba(123, 63, 0, 0.12);
 }
 
+.card--selected.card--nearest {
+  box-shadow:
+    0 0 0 2px rgba(192, 97, 53, 0.14),
+    0 20px 60px rgba(123, 63, 0, 0.16);
+}
+
 .status-pill,
+.selection-badge,
 .nearest-badge,
 .trust-badge,
 .review-state {
@@ -355,9 +382,18 @@ main {
   font-weight: 600;
 }
 
+.selection-badge {
+  background: var(--accent);
+  color: white;
+}
+
 .nearest-badge {
   background: rgba(123, 63, 0, 0.12);
   color: var(--accent-strong);
+}
+
+.card__select-button--selected {
+  box-shadow: 0 10px 24px rgba(94, 47, 0, 0.18);
 }
 
 .trust-badge__dot {
