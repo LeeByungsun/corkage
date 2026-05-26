@@ -47,6 +47,20 @@ export function StoreMap({
     [selectedPlaceId, storeMap],
   );
   const center = useMemo(() => getStoreMapCenter(points), [points]);
+  const selectedPoint = useMemo(
+    () =>
+      selectedPlaceId
+        ? points.find((point) => point.placeId === selectedPlaceId) ?? null
+        : null,
+    [points, selectedPlaceId],
+  );
+  const selectedStore = useMemo(
+    () =>
+      selectedPlaceId
+        ? storeMap.get(selectedPlaceId) ?? null
+        : null,
+    [selectedPlaceId, storeMap],
+  );
   const [loadError, setLoadError] = useState('');
   const mapInstanceRef = useRef<{
     fitBounds: (coords: unknown[], options?: Record<string, unknown>) => void;
@@ -259,11 +273,12 @@ export function StoreMap({
               현재 위치 · {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
             </p>
           ) : null}
-          {selectedStore ? (
-            <div className="map-selection-card map-selection-card--selected">
-              <strong>선택한 식당</strong>
-              <span>{selectedStore.name}</span>
-            </div>
+          {selectedPoint && selectedStore ? (
+            <SelectedStoreCard
+              point={selectedPoint}
+              showCoordinates
+              store={selectedStore}
+            />
           ) : null}
           <PointList
             points={points}
@@ -286,11 +301,8 @@ export function StoreMap({
                 </span>
               </div>
             ) : null}
-            {selectedStore ? (
-              <div className="map-selection-card map-selection-card--selected">
-                <strong>선택한 식당</strong>
-                <span>{selectedStore.name}</span>
-              </div>
+            {selectedPoint && selectedStore ? (
+              <SelectedStoreCard point={selectedPoint} store={selectedStore} />
             ) : null}
             <PointList
               points={points}
@@ -344,17 +356,56 @@ function PointList({
             >
               <strong>{point.name}</strong>
               <span>{point.district}</span>
+              {selected || distanceLabel ? (
+                <div className="map-point-button__meta">
+                  {selected ? (
+                    <span className="map-point-button__state">선택됨</span>
+                  ) : null}
+                  {distanceLabel ? (
+                    <span className="map-point-button__hint">{distanceLabel}</span>
+                  ) : null}
+                </div>
+              ) : null}
               {showCoordinates ? (
                 <span>{point.lat.toFixed(4)}, {point.lng.toFixed(4)}</span>
-              ) : null}
-              {distanceLabel ? (
-                <span className="map-point-button__hint">{distanceLabel}</span>
               ) : null}
             </button>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+type SelectedStoreCardProps = {
+  point: ReturnType<typeof toStoreMapPoints>[number];
+  showCoordinates?: boolean;
+  store: StoreWithDistance;
+};
+
+function SelectedStoreCard({
+  point,
+  showCoordinates = false,
+  store,
+}: SelectedStoreCardProps) {
+  const distanceLabel = getDistanceKmLabel(store.distanceMeters);
+
+  return (
+    <div className="map-selection-card map-selection-card--selected">
+      <span className="map-selection-card__eyebrow">선택한 식당</span>
+      <strong>{point.name}</strong>
+      <span className="muted">{store.roadAddress}</span>
+      {distanceLabel ? (
+        <span className="map-selection-card__distance">
+          현재 위치 기준 {distanceLabel}
+        </span>
+      ) : null}
+      {showCoordinates ? (
+        <span className="muted">
+          {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
