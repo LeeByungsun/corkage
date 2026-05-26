@@ -278,6 +278,7 @@ export function StoreExplorer({
         currentLocation={currentLocation}
         locationError={locationError}
         locationLoading={locationLoading}
+        nearestPlaceId={nearestStorePlaceId}
         onRequestCurrentLocation={handleRequestCurrentLocation}
         onMoveToCurrentLocation={handleMoveToCurrentLocation}
         selectedPlaceId={selectedPlaceId}

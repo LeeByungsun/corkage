@@ -292,6 +292,17 @@ main {
   transform: translateY(-1px);
 }
 
+.map-point-item--nearest {
+  border-color: rgba(123, 63, 0, 0.35);
+  box-shadow: 0 14px 34px rgba(123, 63, 0, 0.08);
+}
+
+.map-point-item--selected.map-point-item--nearest {
+  box-shadow:
+    0 0 0 2px rgba(192, 97, 53, 0.14),
+    0 14px 34px rgba(123, 63, 0, 0.08);
+}
+
 .map-point-button {
   display: grid;
   gap: 0.2rem;
@@ -358,6 +369,12 @@ main {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent-strong);
+}
+
+.map-selection-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .map-selection-card__distance {

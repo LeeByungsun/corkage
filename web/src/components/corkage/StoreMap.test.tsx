@@ -27,6 +27,7 @@ describe('StoreMap', () => {
         currentLocation={null}
         locationError=""
         locationLoading={false}
+        nearestPlaceId={null}
         onRequestCurrentLocation={() => {}}
         onMoveToCurrentLocation={() => {}}
         onSelectPlaceId={() => {}}
@@ -40,7 +41,7 @@ describe('StoreMap', () => {
     expect(screen.getByRole('button', { name: '빈테이블 청담 마커 선택' })).toBeInTheDocument();
   });
 
-  it('keeps the selected fallback marker visually synced when a place is preselected', () => {
+  it('keeps the selected fallback marker visually synced and shows nearest state when a place is preselected', () => {
     const store = getStoreById('seoul-vin-table');
 
     expect(store).toBeDefined();
@@ -56,6 +57,7 @@ describe('StoreMap', () => {
         currentLocation={null}
         locationError=""
         locationLoading={false}
+        nearestPlaceId="seoul-vin-table"
         onRequestCurrentLocation={() => {}}
         onMoveToCurrentLocation={() => {}}
         onSelectPlaceId={() => {}}
@@ -69,8 +71,13 @@ describe('StoreMap', () => {
 
     const markerButton = screen.getByRole('button', { name: '빈테이블 청담 마커 선택' });
     expect(markerButton).toHaveAttribute('aria-pressed', 'true');
-    expect(markerButton.closest('li')).toHaveClass('map-point-item', 'map-point-item--selected');
+    expect(markerButton.closest('li')).toHaveClass(
+      'map-point-item',
+      'map-point-item--nearest',
+      'map-point-item--selected',
+    );
     expect(screen.getByText('선택됨')).toBeInTheDocument();
+    expect(screen.getAllByText('가장 가까움').length).toBeGreaterThan(0);
   });
 
   it('shows an empty-state message when there are no map points', () => {
@@ -81,6 +88,7 @@ describe('StoreMap', () => {
         currentLocation={null}
         locationError=""
         locationLoading={false}
+        nearestPlaceId={null}
         onRequestCurrentLocation={() => {}}
         onMoveToCurrentLocation={() => {}}
         onSelectPlaceId={() => {}}
@@ -162,6 +170,7 @@ describe('StoreMap', () => {
         currentLocation={null}
         locationError=""
         locationLoading={false}
+        nearestPlaceId={null}
         onRequestCurrentLocation={() => {}}
         onMoveToCurrentLocation={() => {}}
         onSelectPlaceId={onSelectPlaceId}
@@ -242,6 +251,7 @@ describe('StoreMap', () => {
         currentLocation={null}
         locationError=""
         locationLoading={false}
+        nearestPlaceId="near-store"
         onRequestCurrentLocation={() => {}}
         onMoveToCurrentLocation={() => {}}
         onSelectPlaceId={() => {}}
@@ -258,8 +268,14 @@ describe('StoreMap', () => {
     expect(screen.getByText('선택한 식당')).toBeInTheDocument();
     expect(selectedSummary).not.toBeNull();
     expect(within(selectedSummary as HTMLElement).getByText('가까운 식당')).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByLabelText(
+        '현재 위치 기준 가장 가까운 선택 식당',
+      ),
+    ).toBeInTheDocument();
     expect(selectedButton).toHaveClass('map-point-button--selected');
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(selectedButton.closest('li')).toHaveClass('map-point-item--nearest');
   });
 
   it('builds the official NAVER Maps SDK URL with ncpKeyId', () => {

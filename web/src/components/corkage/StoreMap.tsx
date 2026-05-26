@@ -16,6 +16,7 @@ type StoreMapProps = {
   currentLocation: GeoPoint | null;
   locationError: string;
   locationLoading: boolean;
+  nearestPlaceId?: string | null;
   onRequestCurrentLocation: () => void;
   onMoveToCurrentLocation: () => void;
   selectedPlaceId: string | null;
@@ -29,6 +30,7 @@ export function StoreMap({
   currentLocation,
   locationError,
   locationLoading,
+  nearestPlaceId = null,
   onRequestCurrentLocation,
   onMoveToCurrentLocation,
   selectedPlaceId,
@@ -41,10 +43,6 @@ export function StoreMap({
   const storeMap = useMemo(
     () => new Map(stores.map((store) => [store.placeId, store] as const)),
     [stores],
-  );
-  const selectedStore = useMemo(
-    () => (selectedPlaceId ? storeMap.get(selectedPlaceId) ?? null : null),
-    [selectedPlaceId, storeMap],
   );
   const center = useMemo(() => getStoreMapCenter(points), [points]);
   const selectedPoint = useMemo(
@@ -275,12 +273,14 @@ export function StoreMap({
           ) : null}
           {selectedPoint && selectedStore ? (
             <SelectedStoreCard
+              nearestPlaceId={nearestPlaceId}
               point={selectedPoint}
               showCoordinates
               store={selectedStore}
             />
           ) : null}
           <PointList
+            nearestPlaceId={nearestPlaceId}
             points={points}
             selectedPlaceId={selectedPlaceId}
             onSelectPlaceId={onSelectPlaceId}
@@ -302,9 +302,14 @@ export function StoreMap({
               </div>
             ) : null}
             {selectedPoint && selectedStore ? (
-              <SelectedStoreCard point={selectedPoint} store={selectedStore} />
+              <SelectedStoreCard
+                nearestPlaceId={nearestPlaceId}
+                point={selectedPoint}
+                store={selectedStore}
+              />
             ) : null}
             <PointList
+              nearestPlaceId={nearestPlaceId}
               points={points}
               selectedPlaceId={selectedPlaceId}
               onSelectPlaceId={onSelectPlaceId}
@@ -319,6 +324,7 @@ export function StoreMap({
 }
 
 type PointListProps = {
+  nearestPlaceId?: string | null;
   points: ReturnType<typeof toStoreMapPoints>;
   selectedPlaceId: string | null;
   onSelectPlaceId: (placeId: string) => void;
@@ -327,6 +333,7 @@ type PointListProps = {
 };
 
 function PointList({
+  nearestPlaceId = null,
   points,
   selectedPlaceId,
   onSelectPlaceId,
@@ -339,10 +346,18 @@ function PointList({
         const distanceLabel = getDistanceKmLabel(
           storeMap.get(point.placeId)?.distanceMeters,
         );
+        const isNearest = nearestPlaceId === point.placeId;
         const selected = selectedPlaceId === point.placeId;
+        const itemClassName = [
+          'map-point-item',
+          selected ? 'map-point-item--selected' : '',
+          isNearest ? 'map-point-item--nearest' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
 
         return (
-          <li key={point.placeId} className={selected ? 'map-point-item map-point-item--selected' : 'map-point-item'}>
+          <li key={point.placeId} className={itemClassName}>
             <button
               aria-label={`${point.name} 마커 선택`}
               aria-pressed={selected}
@@ -356,10 +371,18 @@ function PointList({
             >
               <strong>{point.name}</strong>
               <span>{point.district}</span>
-              {selected || distanceLabel ? (
+              {selected || isNearest || distanceLabel ? (
                 <div className="map-point-button__meta">
                   {selected ? (
                     <span className="map-point-button__state">선택됨</span>
+                  ) : null}
+                  {isNearest ? (
+                    <span
+                      aria-label="현재 위치 기준 가장 가까운 지도 마커"
+                      className="nearest-badge"
+                    >
+                      가장 가까움
+                    </span>
                   ) : null}
                   {distanceLabel ? (
                     <span className="map-point-button__hint">{distanceLabel}</span>
@@ -378,22 +401,35 @@ function PointList({
 }
 
 type SelectedStoreCardProps = {
+  nearestPlaceId?: string | null;
   point: ReturnType<typeof toStoreMapPoints>[number];
   showCoordinates?: boolean;
   store: StoreWithDistance;
 };
 
 function SelectedStoreCard({
+  nearestPlaceId = null,
   point,
   showCoordinates = false,
   store,
 }: SelectedStoreCardProps) {
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
+  const isNearest = nearestPlaceId === point.placeId;
 
   return (
     <div className="map-selection-card map-selection-card--selected">
       <span className="map-selection-card__eyebrow">선택한 식당</span>
       <strong>{point.name}</strong>
+      {isNearest ? (
+        <div className="map-selection-card__badges">
+          <span
+            aria-label="현재 위치 기준 가장 가까운 선택 식당"
+            className="nearest-badge"
+          >
+            가장 가까움
+          </span>
+        </div>
+      ) : null}
       <span className="muted">{store.roadAddress}</span>
       {distanceLabel ? (
         <span className="map-selection-card__distance">

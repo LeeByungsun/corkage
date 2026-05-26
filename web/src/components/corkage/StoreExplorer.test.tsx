@@ -24,6 +24,7 @@ vi.mock('../../lib/repo/use-canonical-stores', () => ({
 vi.mock('./StoreMap', () => ({
   StoreMap: (props: {
     currentLocation: { lat: number; lng: number } | null;
+    nearestPlaceId?: string | null;
     onBoundsChange: (bounds: { north: number; south: number; east: number; west: number } | null) => void;
     onRequestCurrentLocation: () => void;
     onSelectPlaceId: (placeId: string) => void;
@@ -38,6 +39,9 @@ vi.mock('./StoreMap', () => ({
       <button type="button" onClick={() => props.onBoundsChange({ north: 37.53, south: 37.52, east: 127.06, west: 127.04 })}>
         지도 bounds 좁히기
       </button>
+      {props.nearestPlaceId ? (
+        <p aria-label="지도 가장 가까운 식당">{props.nearestPlaceId}</p>
+      ) : null}
       {props.stores.map((store) => (
         <button
           key={store.placeId}
@@ -132,6 +136,7 @@ describe('StoreExplorer', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: '가까운 식당' }).closest('article'),
     ).toHaveClass('card--nearest');
+    expect(screen.getByLabelText('지도 가장 가까운 식당')).toHaveTextContent('near-store');
   });
 
   it('applies radius filter after current location is available', async () => {
