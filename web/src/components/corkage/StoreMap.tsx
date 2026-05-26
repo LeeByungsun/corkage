@@ -273,11 +273,12 @@ export function StoreMap({
               현재 위치 · {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
             </p>
           ) : null}
-          {selectedStore ? (
-            <div className="map-selection-card map-selection-card--selected">
-              <strong>선택한 식당</strong>
-              <span>{selectedStore.name}</span>
-            </div>
+          {selectedPoint && selectedStore ? (
+            <SelectedStoreCard
+              point={selectedPoint}
+              showCoordinates
+              store={selectedStore}
+            />
           ) : null}
           <PointList
             points={points}
@@ -300,11 +301,8 @@ export function StoreMap({
                 </span>
               </div>
             ) : null}
-            {selectedStore ? (
-              <div className="map-selection-card map-selection-card--selected">
-                <strong>선택한 식당</strong>
-                <span>{selectedStore.name}</span>
-              </div>
+            {selectedPoint && selectedStore ? (
+              <SelectedStoreCard point={selectedPoint} store={selectedStore} />
             ) : null}
             <PointList
               points={points}

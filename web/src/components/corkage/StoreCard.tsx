@@ -25,11 +25,7 @@ export function StoreCard({
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
-  const cardClassName = [
-    'card',
-    selected ? 'card--selected' : null,
-    isNearest ? 'card--nearest' : null,
-  ]
+  const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
     .filter(Boolean)
     .join(' ');
 

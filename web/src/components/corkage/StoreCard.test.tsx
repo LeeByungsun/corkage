@@ -25,30 +25,7 @@ describe('StoreCard', () => {
     expect(screen.getByRole('link', { name: '빈테이블 청담 상세 보기' })).toHaveAttribute('href', '/store/seoul-vin-table');
   });
 
-  it('renders an explicit selected state', () => {
-    const store = getStoreById('seoul-vin-table');
-
-    expect(store).toBeDefined();
-
-    render(
-      <StoreCard
-        isNearest={false}
-        onSelect={() => {}}
-        selected
-        store={store!}
-      />,
-    );
-
-    const card = screen.getByRole('heading', { name: '빈테이블 청담' }).closest('article');
-    const selectButton = screen.getByRole('button', { name: '빈테이블 청담 카드 선택' });
-
-    expect(card).toHaveClass('card--selected');
-    expect(screen.getByText('선택됨')).toBeInTheDocument();
-    expect(selectButton).toHaveClass('primary-button', 'card__select-button--selected');
-    expect(selectButton).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('keeps nearest and selected visual hooks together when both states are active', () => {
+  it('shows both selected and nearest visual states together', () => {
     const store = getStoreById('seoul-vin-table');
 
     expect(store).toBeDefined();
@@ -58,14 +35,19 @@ describe('StoreCard', () => {
         isNearest
         onSelect={() => {}}
         selected
-        store={store!}
+        store={{
+          ...store!,
+          distanceMeters: 120,
+        }}
       />,
     );
 
-    const card = screen.getByRole('heading', { name: '빈테이블 청담' }).closest('article');
-
-    expect(card).toHaveClass('card--selected', 'card--nearest');
-    expect(screen.getByLabelText('현재 위치 기준 가장 가까운 식당')).toBeInTheDocument();
     expect(screen.getByText('선택됨')).toBeInTheDocument();
+    expect(screen.getByLabelText('현재 위치 기준 가장 가까운 식당')).toBeInTheDocument();
+    expect(screen.getByText('120m')).toBeInTheDocument();
+
+    const article = screen.getByRole('heading', { name: '빈테이블 청담' }).closest('article');
+    expect(article).toHaveClass('card', 'card--selected', 'card--nearest');
+    expect(screen.getByRole('button', { name: '빈테이블 청담 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

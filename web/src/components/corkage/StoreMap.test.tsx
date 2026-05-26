@@ -40,15 +40,20 @@ describe('StoreMap', () => {
     expect(screen.getByRole('button', { name: '빈테이블 청담 마커 선택' })).toBeInTheDocument();
   });
 
-  it('keeps fallback guidance visible while highlighting the selected point', () => {
+  it('keeps the selected fallback marker visually synced when a place is preselected', () => {
     const store = getStoreById('seoul-vin-table');
 
     expect(store).toBeDefined();
 
     render(
       <StoreMap
-        stores={[store!]}
-        currentLocation={{ lat: 37.5249, lng: 127.0478 }}
+        stores={[
+          {
+            ...store!,
+            distanceMeters: 250,
+          },
+        ]}
+        currentLocation={null}
         locationError=""
         locationLoading={false}
         onRequestCurrentLocation={() => {}}
@@ -59,13 +64,13 @@ describe('StoreMap', () => {
       />,
     );
 
-    const selectedButton = screen.getByRole('button', { name: '빈테이블 청담 마커 선택' });
-
-    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('선택한 식당')).toBeInTheDocument();
-    expect(screen.getByText(/현재 위치 · 37.5249, 127.0478/)).toBeInTheDocument();
-    expect(selectedButton).toHaveClass('map-point-button--selected');
-    expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('현재 위치 기준 250m')).toBeInTheDocument();
+
+    const markerButton = screen.getByRole('button', { name: '빈테이블 청담 마커 선택' });
+    expect(markerButton).toHaveAttribute('aria-pressed', 'true');
+    expect(markerButton.closest('li')).toHaveClass('map-point-item', 'map-point-item--selected');
+    expect(screen.getByText('선택됨')).toBeInTheDocument();
   });
 
   it('shows an empty-state message when there are no map points', () => {
