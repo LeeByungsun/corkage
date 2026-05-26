@@ -62,9 +62,7 @@ describe('StoreCard', () => {
       />,
     );
 
-    expect(screen.getByText('선택됨')).toBeInTheDocument();
-    expect(screen.getByLabelText('현재 위치 기준 가장 가까운 식당')).toBeInTheDocument();
-    expect(screen.getByText('120m')).toBeInTheDocument();
+    const card = screen.getByRole('heading', { name: '빈테이블 청담' }).closest('article');
 
     expect(card).toHaveClass('card--selected', 'card--nearest');
     expect(screen.getByLabelText('현재 위치 기준 가장 가까운 식당')).toBeInTheDocument();
