@@ -40,6 +40,39 @@ describe('StoreMap', () => {
     expect(screen.getByRole('button', { name: '빈테이블 청담 마커 선택' })).toBeInTheDocument();
   });
 
+  it('keeps the selected fallback marker visually synced when a place is preselected', () => {
+    const store = getStoreById('seoul-vin-table');
+
+    expect(store).toBeDefined();
+
+    render(
+      <StoreMap
+        stores={[
+          {
+            ...store!,
+            distanceMeters: 250,
+          },
+        ]}
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+        onSelectPlaceId={() => {}}
+        onBoundsChange={() => {}}
+        selectedPlaceId="seoul-vin-table"
+      />,
+    );
+
+    expect(screen.getByText('선택한 식당')).toBeInTheDocument();
+    expect(screen.getByText('현재 위치 기준 250m')).toBeInTheDocument();
+
+    const markerButton = screen.getByRole('button', { name: '빈테이블 청담 마커 선택' });
+    expect(markerButton).toHaveAttribute('aria-pressed', 'true');
+    expect(markerButton.closest('li')).toHaveClass('map-point-item', 'map-point-item--selected');
+    expect(screen.getByText('선택됨')).toBeInTheDocument();
+  });
+
   it('shows an empty-state message when there are no map points', () => {
     render(
       <StoreMap

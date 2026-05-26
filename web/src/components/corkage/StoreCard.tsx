@@ -25,9 +25,12 @@ export function StoreCard({
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
+  const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <article className={selected ? 'card card--selected' : isNearest ? 'card card--nearest' : 'card'}>
+    <article className={cardClassName}>
       <div className="card__header">
         <div>
           <p className="eyebrow">
@@ -36,6 +39,7 @@ export function StoreCard({
           <h2>{store.name}</h2>
         </div>
         <div className="card__badges">
+          {selected ? <span className="selection-badge">선택됨</span> : null}
           {isNearest ? (
             <span
               aria-label="현재 위치 기준 가장 가까운 식당"
