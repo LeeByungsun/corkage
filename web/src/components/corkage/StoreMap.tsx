@@ -528,6 +528,13 @@ function createMarkerIcon(
     nearest: boolean;
   },
 ): MarkerIcon {
+  const markerState = selected && nearest
+    ? 'selected-nearest'
+    : selected
+      ? 'selected'
+      : nearest
+        ? 'nearest'
+        : 'default';
   const badgeLabel = selected && nearest
     ? '선택 · 가장 가까움'
     : selected
@@ -566,7 +573,7 @@ function createMarkerIcon(
 
   return {
     content: `
-      <div aria-label="${escapeHtml(name)} 지도 마커" style="transform:translate(-50%, -100%);display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div aria-label="${escapeHtml(name)} 지도 마커" data-marker-state="${markerState}" style="transform:translate(-50%, -100%);display:flex;flex-direction:column;align-items:center;gap:6px;">
         ${badgeMarkup}
         <div style="position:relative;width:36px;height:36px;border-radius:999px 999px 999px 0;background:${markerFill};border:2px solid ${markerBorder};transform:rotate(-45deg);${halo}">
           <div style="position:absolute;inset:7px;border-radius:999px;background:${selected ? 'rgba(255, 250, 243, 0.22)' : 'rgba(123, 63, 0, 0.08)'};"></div>

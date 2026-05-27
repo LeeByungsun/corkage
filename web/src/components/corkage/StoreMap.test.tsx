@@ -300,7 +300,7 @@ describe('StoreMap', () => {
       expect.objectContaining({
         zIndex: 30,
         icon: expect.objectContaining({
-          content: expect.stringContaining('선택'),
+          content: expect.stringContaining('data-marker-state="selected"'),
         }),
       }),
     );
@@ -308,7 +308,7 @@ describe('StoreMap', () => {
       expect.objectContaining({
         zIndex: 20,
         icon: expect.objectContaining({
-          content: expect.stringContaining('가장 가까움'),
+          content: expect.stringContaining('data-marker-state="nearest"'),
         }),
       }),
     );
@@ -349,8 +349,7 @@ describe('StoreMap', () => {
 
     expect(deselectedMarkerContent).not.toContain('선택');
     expect(deselectedMarkerContent).not.toContain('가장 가까움');
-    expect(selectedNearestMarkerContent).toContain('선택');
-    expect(selectedNearestMarkerContent).toContain('가장 가까움');
+    expect(selectedNearestMarkerContent).toContain('data-marker-state="selected-nearest"');
     expect(markerInstances[0]?.setZIndex).toHaveBeenLastCalledWith(10);
     expect(markerInstances[1]?.setZIndex).toHaveBeenLastCalledWith(30);
   });
