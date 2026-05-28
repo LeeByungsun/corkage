@@ -1,14 +1,8 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StoreExplorer } from './StoreExplorer';
 
-const storeMapRenderProps = vi.hoisted(() => [] as Array<{ stores: unknown[] }>);
 const replaceMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -18,49 +12,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('./StoreMap', () => ({
-  StoreMap: (props: {
-    currentLocation: { lat: number; lng: number } | null;
-    nearestPlaceId?: string | null;
-    onBoundsChange: (bounds: { north: number; south: number; east: number; west: number } | null) => void;
-    onRequestCurrentLocation: () => void;
-    onSelectPlaceId: (placeId: string) => void;
-    selectedPlaceId: string | null;
-    stores: Array<{ placeId: string; name: string }>;
-  }) => {
-    storeMapRenderProps.push({ stores: props.stores });
-
-    return (
-      <div>
-        <button type="button" onClick={props.onRequestCurrentLocation}>
-          현재 위치 가져오기
-        </button>
-        {props.currentLocation ? <p>현재 위치 기준 정렬</p> : null}
-        <button type="button" onClick={() => props.onBoundsChange({ north: 37.53, south: 37.52, east: 127.06, west: 127.04 })}>
-          지도 bounds 좁히기
-        </button>
-        {props.nearestPlaceId ? (
-          <p aria-label="지도 가장 가까운 식당">{props.nearestPlaceId}</p>
-        ) : null}
-        {props.stores.map((store) => (
-          <button
-            key={store.placeId}
-            aria-label={`${store.name} 마커 선택`}
-            aria-pressed={props.selectedPlaceId === store.placeId}
-            onClick={() => props.onSelectPlaceId(store.placeId)}
-            type="button"
-          >
-            {store.name} 선택
-          </button>
-        ))}
-      </div>
-    );
-  },
+  StoreMap: () => <div data-testid="store-map">지도</div>,
 }));
 
 const testStores = [
   {
-    placeId: 'near-store',
-    name: '가까운 식당',
+    placeId: 'available-gangnam',
+    name: '가능 식당',
     address: '서울시 강남구 1',
     roadAddress: '서울시 강남구 1',
     lat: 37.5252,
@@ -72,41 +30,90 @@ const testStores = [
     confidenceLabel: 'high',
     verifiedAt: '2026-05-22',
     sourceType: 'operator_verified',
-    sourceNote: '테스트',
-    conditionNote: '테스트',
+    sourceNote: '매장 확인',
+    conditionNote: '와인 1병 가능',
   },
   {
-    placeId: 'far-store',
-    name: '먼 식당',
-    address: '서울시 성수구 2',
-    roadAddress: '서울시 성수구 2',
+    placeId: 'unknown-gangnam',
+    name: '확인중 식당',
+    address: '서울시 강남구 2',
+    roadAddress: '서울시 강남구 2',
+    lat: 37.5262,
+    lng: 127.0492,
+    category: '비스트로',
+    district: '강남',
+    corkageStatus: 'unknown',
+    freshnessState: 'fresh',
+    confidenceLabel: 'low',
+    verifiedAt: '검수 전',
+    sourceType: 'public_web_reference',
+    sourceNote: '후보 정보',
+    conditionNote: '확인 필요',
+  },
+  {
+    placeId: 'unavailable-gangnam',
+    name: '불가 식당',
+    address: '서울시 강남구 3',
+    roadAddress: '서울시 강남구 3',
+    lat: 37.5272,
+    lng: 127.0502,
+    category: '한식',
+    district: '강남',
+    corkageStatus: 'unavailable',
+    freshnessState: 'fresh',
+    confidenceLabel: 'high',
+    verifiedAt: '2026-05-22',
+    sourceType: 'operator_verified',
+    sourceNote: '매장 확인',
+    conditionNote: '반입 불가',
+  },
+  {
+    placeId: 'stale-gangnam',
+    name: '오래된 식당',
+    address: '서울시 강남구 4',
+    roadAddress: '서울시 강남구 4',
+    lat: 37.5282,
+    lng: 127.0512,
+    category: '와인바',
+    district: '강남',
+    corkageStatus: 'available',
+    freshnessState: 'stale',
+    confidenceLabel: 'medium',
+    verifiedAt: '2025-01-01',
+    sourceType: 'operator_verified',
+    sourceNote: '오래된 확인',
+    conditionNote: '정보 오래됨',
+  },
+  {
+    placeId: 'available-seongsu',
+    name: '성수 가능 식당',
+    address: '서울시 성수구 1',
+    roadAddress: '서울시 성수구 1',
     lat: 37.5602,
     lng: 127.1502,
-    category: '비스트로',
+    category: '다이닝',
     district: '성수',
     corkageStatus: 'available',
     freshnessState: 'fresh',
     confidenceLabel: 'medium',
     verifiedAt: '2026-05-22',
     sourceType: 'operator_verified',
-    sourceNote: '테스트',
-    conditionNote: '테스트',
+    sourceNote: '매장 확인',
+    conditionNote: '확인됨',
   },
 ] as const;
 
 const testDistricts = ['강남', '성수'];
 
-function renderStoreExplorer() {
+function renderStoreExplorer(
+  overrides: Partial<ComponentProps<typeof StoreExplorer>> = {},
+) {
   return render(
     <StoreExplorer
       district="all"
       districts={[...testDistricts]}
-      initialRadius="all"
-      initialSelectedPlaceId=""
-      initialSort="default"
-      maxFeeInput=""
-      status="all"
       stores={[...testStores]}
+      {...overrides}
     />,
   );
 }
@@ -114,122 +121,37 @@ function renderStoreExplorer() {
 describe('StoreExplorer', () => {
   beforeEach(() => {
     replaceMock.mockReset();
-    storeMapRenderProps.length = 0;
-
-    vi.stubGlobal('navigator', {
-      geolocation: {
-        getCurrentPosition: vi.fn((success: PositionCallback) =>
-          success({
-            coords: {
-              latitude: 37.5252,
-              longitude: 127.0482,
-              accuracy: 30,
-            },
-          } as GeolocationPosition),
-        ),
-      },
-    });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it('gets current location and sorts stores by nearest first', async () => {
-    renderStoreExplorer();
-
-    fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/현재 위치 기준 정렬/)).toBeInTheDocument(),
-    );
+  it('shows only the region gate before a region is selected', () => {
+    renderStoreExplorer({ district: 'all' });
 
     expect(
-      screen.getByRole('heading', { level: 2, name: '가까운 식당' }),
+      screen.getByRole('heading', { name: '어느 지역에서 찾으세요?' }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('0m').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('지역')).toBeInTheDocument();
     expect(
-      screen.getByLabelText('현재 위치 기준 가장 가까운 식당'),
+      screen.getByRole('button', { name: '지역 선택하기' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { level: 2, name: '가까운 식당' }).closest('article'),
-    ).toHaveClass('card--nearest');
-    expect(screen.getByLabelText('지도 가장 가까운 식당')).toHaveTextContent('near-store');
+    expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
+    expect(screen.queryByText(/개 결과|개 식당/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '가능 식당' })).not.toBeInTheDocument();
   });
 
-  it('applies radius filter after current location is available', async () => {
-    renderStoreExplorer();
+  it('shows available and unknown stores for the selected region without the map', () => {
+    renderStoreExplorer({ district: '강남' });
 
-    fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/현재 위치 기준 정렬/)).toBeInTheDocument(),
-    );
-
-    fireEvent.change(screen.getByLabelText('반경'), {
-      target: { value: '1000' },
-    });
-
-    expect(screen.getByText('1개 결과')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '가까운 식당' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '먼 식당' })).not.toBeInTheDocument();
-  });
-
-  it('syncs marker selection and card selection in both directions', () => {
-    renderStoreExplorer();
-
-    fireEvent.click(screen.getByRole('button', { name: '먼 식당 마커 선택' }));
-
-    expect(screen.getByRole('button', { name: '먼 식당 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: '먼 식당 마커 선택' })).toHaveAttribute('aria-pressed', 'true');
-
-    const farCard = screen.getByRole('heading', { name: '먼 식당' }).closest('article');
-    expect(farCard).not.toBeNull();
-    expect(farCard).toHaveClass('card--selected');
-    expect(within(farCard as HTMLElement).getByRole('button', { name: '먼 식당 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(screen.getByRole('button', { name: '가까운 식당 카드 선택' }));
-
-    expect(screen.getByRole('button', { name: '가까운 식당 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: '가까운 식당 마커 선택' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('limits the list to stores inside the current map bounds', () => {
-    renderStoreExplorer();
-
-    fireEvent.click(screen.getByRole('button', { name: '지도 bounds 좁히기' }));
-
-    expect(screen.getByText('1개 결과')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '가까운 식당' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '먼 식당' })).not.toBeInTheDocument();
-  });
-
-  it('keeps map input stable when only bounds-filtered list state changes', () => {
-    renderStoreExplorer();
-
-    const initialMapStores = storeMapRenderProps.at(-1)?.stores;
-
-    fireEvent.click(screen.getByRole('button', { name: '지도 bounds 좁히기' }));
-
-    expect(screen.getByText('1개 결과')).toBeInTheDocument();
-    expect(storeMapRenderProps.at(-1)?.stores).toBe(initialMapStores);
-  });
-
-  it('writes selected/sort/radius state back to the URL query', async () => {
-    renderStoreExplorer();
-
-    fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
-    await waitFor(() => expect(replaceMock).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole('button', { name: '먼 식당 마커 선택' }));
-    fireEvent.change(screen.getByLabelText('반경'), {
-      target: { value: '3000' },
-    });
-
-    const calls = replaceMock.mock.calls.map((call) => String(call[0]));
-    expect(calls.some((value) => value.includes('sort=distance'))).toBe(true);
-    expect(calls.some((value) => value.includes('radius=3000'))).toBe(true);
-    expect(calls.some((value) => value.includes('selected=far-store'))).toBe(true);
+    expect(screen.getByText('강남')).toBeInTheDocument();
+    expect(screen.getByText('2개 식당')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '가능 식당' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '확인중 식당' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '불가 식당' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '오래된 식당' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '성수 가능 식당' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
   });
 });

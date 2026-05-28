@@ -10,23 +10,27 @@ import type { CorkageStore } from '../../lib/types/corkage';
 import { TrustBadge } from './TrustBadge';
 
 type StoreCardProps = {
-  isNearest: boolean;
-  onSelect: () => void;
-  selected: boolean;
+  isNearest?: boolean;
+  onSelect?: () => void;
+  selected?: boolean;
   store: CorkageStore & {
     distanceMeters?: number;
   };
 };
 
 export function StoreCard({
-  isNearest,
+  isNearest = false,
   onSelect,
-  selected,
+  selected = false,
   store,
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
   const corkageFacilities = getCorkageFacilityLabels(store);
+  const visibilityNote =
+    store.corkageStatus === 'unknown'
+      ? '콜키지 정보 확인 필요 · 방문 전 매장 확인 권장'
+      : getVisibilityNote(store);
   const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
     .filter(Boolean)
     .join(' ');
@@ -78,7 +82,7 @@ export function StoreCard({
         ) : null}
       </dl>
 
-      <p className="card__notice">{getVisibilityNote(store)}</p>
+      <p className="card__notice">{visibilityNote}</p>
       <p className="card__condition">{store.conditionNote}</p>
 
       {corkageFacilities.length > 0 ? (
@@ -90,20 +94,26 @@ export function StoreCard({
       ) : null}
 
       <div className="card__actions">
-        <button
-          aria-label={`${store.name} 카드 선택`}
-          aria-pressed={selected}
-          className={
-            selected
-              ? 'primary-button card__select-button card__select-button--selected'
-              : 'secondary-button card__select-button'
-          }
-          onClick={onSelect}
-          type="button"
+        {onSelect ? (
+          <button
+            aria-label={`${store.name} 카드 선택`}
+            aria-pressed={selected}
+            className={
+              selected
+                ? 'primary-button card__select-button card__select-button--selected'
+                : 'secondary-button card__select-button'
+            }
+            onClick={onSelect}
+            type="button"
+          >
+            카드 선택
+          </button>
+        ) : null}
+        <Link
+          aria-label={`${store.name} 상세 보기`}
+          className="card__link"
+          href={`/store/${store.placeId}`}
         >
-          카드 선택
-        </button>
-        <Link aria-label={`${store.name} 상세 보기`} className="card__link" href={`/store/${store.placeId}`}>
           상세 보기
         </Link>
       </div>

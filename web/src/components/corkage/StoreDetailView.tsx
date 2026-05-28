@@ -7,6 +7,7 @@ import {
 } from '../../lib/repo/corkage-repo';
 import type { CorkageStore } from '../../lib/types/corkage';
 import { TrustBadge } from './TrustBadge';
+import { StoreLocationMap } from './StoreLocationMap';
 
 type StoreDetailViewProps = {
   store: CorkageStore;
@@ -45,6 +46,10 @@ export function StoreDetailView({ store }: StoreDetailViewProps) {
         confidenceLabel={store.confidenceLabel}
         freshnessState={store.freshnessState}
       />
+      <p className="detail-warning">
+        콜키지 정책은 방문 전 매장에 다시 확인하세요.
+      </p>
+      <StoreLocationMap store={store} />
     </section>
   );
 }

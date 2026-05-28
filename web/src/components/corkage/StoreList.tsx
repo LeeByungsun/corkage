@@ -3,16 +3,16 @@ import { StoreCard } from './StoreCard';
 
 type StoreListProps = {
   stores: StoreWithDistance[];
-  nearestStorePlaceId: string | null;
-  onSelectPlaceId: (placeId: string) => void;
-  selectedPlaceId: string | null;
+  nearestStorePlaceId?: string | null;
+  onSelectPlaceId?: (placeId: string) => void;
+  selectedPlaceId?: string | null;
 };
 
 export function StoreList({
   stores,
-  nearestStorePlaceId,
+  nearestStorePlaceId = null,
   onSelectPlaceId,
-  selectedPlaceId,
+  selectedPlaceId = null,
 }: StoreListProps) {
   if (stores.length === 0) {
     return (
@@ -29,7 +29,7 @@ export function StoreList({
         <StoreCard
           key={store.placeId}
           isNearest={store.placeId === nearestStorePlaceId}
-          onSelect={() => onSelectPlaceId(store.placeId)}
+          onSelect={onSelectPlaceId ? () => onSelectPlaceId(store.placeId) : undefined}
           selected={store.placeId === selectedPlaceId}
           store={store}
         />

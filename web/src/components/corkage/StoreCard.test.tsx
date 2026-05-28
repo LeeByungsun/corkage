@@ -81,3 +81,44 @@ describe('StoreCard', () => {
     expect(screen.getByRole('button', { name: '빈테이블 청담 카드 선택' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+describe('StoreCard guest mode', () => {
+  it('renders as a simple guest card when no selection handler is provided', () => {
+    const store = getStoreById('seoul-vin-table');
+
+    expect(store).toBeDefined();
+
+    render(<StoreCard store={store!} />);
+
+    expect(screen.queryByRole('button', { name: /카드 선택$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '빈테이블 청담 상세 보기' })).toHaveAttribute(
+      'href',
+      '/store/seoul-vin-table',
+    );
+  });
+
+  it('uses conservative guest copy for unknown corkage stores', () => {
+    const store = getStoreById('seoul-vin-table');
+
+    expect(store).toBeDefined();
+
+    render(
+      <StoreCard
+        store={{
+          ...store!,
+          corkageStatus: 'unknown',
+          confidenceLabel: 'low',
+          conditionNote: '확인 필요',
+          sourceNote: '후보 정보',
+          verifiedAt: '검수 전',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('확인중')).toBeInTheDocument();
+    expect(
+      screen.getByText('콜키지 정보 확인 필요 · 방문 전 매장 확인 권장'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('비용 공개 전')).toBeInTheDocument();
+  });
+});

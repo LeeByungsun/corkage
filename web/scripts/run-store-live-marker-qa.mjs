@@ -18,7 +18,7 @@ async function main() {
     );
   }
 
-  console.log(`Running store live marker QA at http://${HOST}:${PORT}/store`);
+  console.log(`Running store detail location map QA at http://${HOST}:${PORT}`);
 
   await mkdir(TEMP_ROOT, { recursive: true });
   const tempDir = await mkdtemp(path.join(TEMP_ROOT, 'store-live-marker-qa-'));
@@ -118,45 +118,28 @@ export default defineConfig({
 function buildSpec() {
   return `import { expect, test } from '@playwright/test';
 
-test.describe('store live marker QA harness', () => {
-  test('renders selected and nearest NAVER marker states on real /store map', async ({ page }) => {
+test.describe('store detail location map QA harness', () => {
+  test('renders a NAVER marker on a real store detail page', async ({ page }) => {
     test.slow();
 
-    await page.goto('/store');
+    const response = await page.request.get('/api/stores?status=available');
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    const store = payload.stores.find((item) =>
+      Number.isFinite(item.lat) && Number.isFinite(item.lng)
+    );
 
-    await expect(
-      page.getByRole('button', { name: '현재 위치 가져오기' }),
-    ).toBeVisible();
+    expect(store, 'expected at least one available store with coordinates').toBeTruthy();
 
-    const cardButtons = page.getByRole('button', { name: /카드 선택$/ });
-    const markerStates = page.locator('[data-marker-state]');
+    await page.goto('/store/' + store.placeId);
 
-    await expect(markerStates.first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-marker-state="default"]').first()).toBeVisible();
-
-    await expect(cardButtons.first()).toBeVisible();
-    await cardButtons.first().dispatchEvent('click');
-    await expect(
-      page.locator('[data-marker-state="selected"], [data-marker-state="selected-nearest"]').first(),
-    ).toBeVisible();
-
-    const currentLocationButton = page.getByRole('button', { name: '현재 위치 가져오기' });
-    await expect(currentLocationButton).toBeVisible();
-    await currentLocationButton.dispatchEvent('click');
-    await expect(page.getByText(/현재 위치 기준 정렬/)).toBeVisible();
-    await expect(
-      page.locator('[data-marker-state="nearest"], [data-marker-state="selected-nearest"]').first(),
-    ).toBeVisible({ timeout: 20_000 });
-
-    const nearestMarkerButton = page.locator('.map-point-button', {
-      has: page.getByLabel('현재 위치 기준 가장 가까운 지도 마커'),
-    }).first();
-
-    await expect(nearestMarkerButton).toBeVisible();
-    await nearestMarkerButton.dispatchEvent('click');
-    await expect(
-      page.locator('[data-marker-state="selected-nearest"]').first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: store.name })).toBeVisible();
+    await expect(page.getByText('콜키지 정책은 방문 전 매장에 다시 확인하세요.')).toBeVisible();
+    await expect(page.getByLabel(store.name + ' 위치 지도')).toHaveAttribute(
+      'data-location-map-state',
+      'ready',
+      { timeout: 20_000 },
+    );
   });
 });
 `;
