@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS stores (
   website_url TEXT,
   external_reference_url TEXT,
   memo TEXT,
+  raw_facilities_json TEXT,
   corkage_status TEXT NOT NULL,
   freshness_state TEXT NOT NULL,
   confidence_label TEXT NOT NULL,
@@ -59,6 +60,7 @@ type StoreRow = {
   website_url?: string | null;
   external_reference_url?: string | null;
   memo?: string | null;
+  raw_facilities_json?: string | null;
   corkage_status: CorkageStatus;
   freshness_state: FreshnessState;
   confidence_label: ConfidenceLabel;
@@ -88,6 +90,7 @@ export function openStoreDatabase() {
   database.exec('PRAGMA journal_mode = WAL');
   database.exec('PRAGMA foreign_keys = ON');
   database.exec(STORE_TABLE_SQL);
+  ensureStoreSchema(database);
   seedDatabaseIfEmpty(database);
 
   return database;
@@ -200,6 +203,7 @@ export function updateCorkageInfoInDatabase(updates: CorkageInfoUpdate[]) {
         alcohol_type_limit = :alcoholTypeLimit,
         glass_service_available = :glassServiceAvailable,
         memo = :memo,
+        raw_facilities_json = :rawFacilitiesJson,
         updated_at = CURRENT_TIMESTAMP
       WHERE place_id = :placeId
     `);
@@ -237,6 +241,7 @@ export function updateCorkageInfoInDatabase(updates: CorkageInfoUpdate[]) {
               ? 1
               : 0,
         memo: update.memo ?? current.memo ?? null,
+        rawFacilitiesJson: serializeFacilities(current.raw_facilities_json),
       });
 
       return {
@@ -252,6 +257,17 @@ export function updateCorkageInfoInDatabase(updates: CorkageInfoUpdate[]) {
     throw error;
   } finally {
     database.close();
+  }
+}
+
+function ensureStoreSchema(database: DatabaseSync) {
+  const columns = database.prepare('PRAGMA table_info(stores)').all() as Array<{
+    name: string;
+  }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has('raw_facilities_json')) {
+    database.exec('ALTER TABLE stores ADD COLUMN raw_facilities_json TEXT');
   }
 }
 
@@ -296,6 +312,7 @@ function upsertStores(database: DatabaseSync, stores: CorkageStore[]) {
       website_url,
       external_reference_url,
       memo,
+      raw_facilities_json,
       corkage_status,
       freshness_state,
       confidence_label,
@@ -323,6 +340,7 @@ function upsertStores(database: DatabaseSync, stores: CorkageStore[]) {
       :websiteUrl,
       :externalReferenceUrl,
       :memo,
+      :rawFacilitiesJson,
       :corkageStatus,
       :freshnessState,
       :confidenceLabel,
@@ -350,6 +368,7 @@ function upsertStores(database: DatabaseSync, stores: CorkageStore[]) {
       website_url = excluded.website_url,
       external_reference_url = excluded.external_reference_url,
       memo = excluded.memo,
+      raw_facilities_json = excluded.raw_facilities_json,
       corkage_status = excluded.corkage_status,
       freshness_state = excluded.freshness_state,
       confidence_label = excluded.confidence_label,
@@ -380,6 +399,7 @@ function upsertStores(database: DatabaseSync, stores: CorkageStore[]) {
       websiteUrl: store.websiteUrl ?? null,
       externalReferenceUrl: store.externalReferenceUrl ?? null,
       memo: store.memo ?? null,
+      rawFacilitiesJson: serializeFacilities(store.rawFacilities),
       corkageStatus: store.corkageStatus,
       freshnessState: store.freshnessState,
       confidenceLabel: store.confidenceLabel,
@@ -416,6 +436,7 @@ function mapStoreRow(row: StoreRow): CorkageStore {
     websiteUrl: row.website_url ?? undefined,
     externalReferenceUrl: row.external_reference_url ?? undefined,
     memo: row.memo ?? undefined,
+    rawFacilities: parseFacilities(row.raw_facilities_json),
     corkageStatus: row.corkage_status,
     freshnessState: row.freshness_state,
     confidenceLabel: row.confidence_label,
@@ -432,4 +453,34 @@ function mapStoreRow(row: StoreRow): CorkageStore {
         ? undefined
         : Boolean(row.glass_service_available),
   };
+}
+
+function serializeFacilities(value: string[] | string | null | undefined) {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.filter((item) => item.trim()));
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return null;
+}
+
+function parseFacilities(value: string | null | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string');
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 }

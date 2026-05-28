@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS stores (
   website_url TEXT,
   external_reference_url TEXT,
   memo TEXT,
+  raw_facilities_json TEXT,
   corkage_status TEXT NOT NULL,
   freshness_state TEXT NOT NULL,
   confidence_label TEXT NOT NULL,
@@ -45,8 +46,8 @@ CREATE TABLE IF NOT EXISTS stores (
 
 await mkdir(path.dirname(DB_PATH), { recursive: true });
 const raw = await readFile(SOURCE_PATH, 'utf8');
-const apolloState = JSON.parse(raw);
-const stores = normalizeNaverPlaceList(apolloState);
+const source = JSON.parse(raw);
+const stores = normalizeSource(source);
 
 if (stores.length === 0) {
   throw new Error(`No PlaceListBusinessesItem restaurant rows found in ${SOURCE_PATH}`);
@@ -54,6 +55,7 @@ if (stores.length === 0) {
 
 const database = new DatabaseSync(DB_PATH);
 database.exec(STORE_TABLE_SQL);
+ensureStoreSchema(database);
 database.exec('BEGIN');
 try {
   database.prepare('DELETE FROM stores').run();
@@ -70,6 +72,8 @@ try {
       district,
       phone,
       external_reference_url,
+      memo,
+      raw_facilities_json,
       corkage_status,
       freshness_state,
       confidence_label,
@@ -77,6 +81,8 @@ try {
       source_type,
       source_note,
       condition_note,
+      corkage_fee,
+      fee_unit,
       updated_at
     ) VALUES (
       :placeId,
@@ -90,6 +96,8 @@ try {
       :district,
       :phone,
       :externalReferenceUrl,
+      :memo,
+      :rawFacilitiesJson,
       :corkageStatus,
       :freshnessState,
       :confidenceLabel,
@@ -97,12 +105,21 @@ try {
       :sourceType,
       :sourceNote,
       :conditionNote,
+      :corkageFee,
+      :feeUnit,
       CURRENT_TIMESTAMP
     )
   `);
 
   for (const store of stores) {
-    statement.run(store);
+    statement.run({
+      phone: null,
+      memo: null,
+      rawFacilitiesJson: null,
+      corkageFee: null,
+      feeUnit: null,
+      ...store,
+    });
   }
 
   database.exec('COMMIT');
@@ -175,12 +192,144 @@ function normalizeNaverPlaceList(state) {
   );
 }
 
+function normalizeSource(source) {
+  if (Array.isArray(source)) {
+    return normalizeNaverFacilityResults(source);
+  }
+
+  return normalizeNaverPlaceList(source);
+}
+
+function normalizeNaverFacilityResults(rows) {
+  const today = process.env.CORKAGE_IMPORT_VERIFIED_AT ?? new Date().toISOString().slice(0, 10);
+  const deduped = new Map();
+
+  for (const row of rows) {
+    const placeId = normalizeText(row.id ?? row.placeId);
+    const name = normalizeText(row.name);
+    const lat = Number(row.y ?? row.lat);
+    const lng = Number(row.x ?? row.lng);
+
+    if (!placeId || !name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      continue;
+    }
+
+    const categories = Array.isArray(row.category)
+      ? row.category.map(normalizeText).filter(Boolean)
+      : [normalizeText(row.category)].filter(Boolean);
+    const categoryRaw = categories.join(' > ') || '음식점';
+    const fullAddress = normalizeText(row.fullAddress);
+    const roadAddress = normalizeText(row.roadAddress) || fullAddress;
+    const address = fullAddress || roadAddress;
+    const facilities = Array.isArray(row.facilities)
+      ? row.facilities.map(normalizeText).filter(Boolean)
+      : [];
+    const corkageFacts = mapCorkageFacts(row, facilities);
+
+    deduped.set(placeId, {
+      placeId,
+      name,
+      address,
+      roadAddress,
+      lat,
+      lng,
+      category: mapServiceCategory(categoryRaw),
+      categoryRaw,
+      district: inferDistrict(address),
+      externalReferenceUrl: `https://m.place.naver.com/restaurant/${placeId}/home`,
+      rawFacilitiesJson: JSON.stringify(facilities),
+      corkageStatus: corkageFacts.status,
+      freshnessState: 'fresh',
+      confidenceLabel: 'low',
+      verifiedAt: today,
+      sourceType: 'public_web_reference',
+      sourceNote: 'NAVER InformationFacilities 자동 추출',
+      conditionNote: corkageFacts.conditionNote,
+      corkageFee: corkageFacts.corkageFee,
+      feeUnit: corkageFacts.feeUnit,
+      memo: corkageFacts.memo,
+    });
+  }
+
+  return [...deduped.values()].sort((left, right) =>
+    `${left.district} ${left.name}`.localeCompare(`${right.district} ${right.name}`, 'ko'),
+  );
+}
+
+function mapCorkageFacts(row, facilities) {
+  const feeText = normalizeText(row.corkageFee);
+  const corkageFacilities = facilities.filter((facility) => facility.includes('콜키지'));
+  const hasCorkageFacility = corkageFacilities.length > 0;
+  const allowed =
+    row.corkageAllowed === true ||
+    hasCorkageFacility ||
+    feeText === '무료' ||
+    feeText === '유료';
+
+  if (allowed) {
+    return {
+      status: 'available',
+      corkageFee: feeText === '무료' ? 0 : null,
+      feeUnit: feeText === '무료' ? 'free' : null,
+      conditionNote:
+        corkageFacilities.length > 0
+          ? corkageFacilities.join(', ')
+          : `콜키지 가능 (${feeText || '세부 비용 확인 필요'})`,
+      memo: `NAVER 편의정보 원본: ${facilities.join(', ') || '없음'}`,
+    };
+  }
+
+  if (row.corkageAllowed === false || feeText === '정보없음') {
+    return {
+      status: 'unavailable',
+      corkageFee: null,
+      feeUnit: null,
+      conditionNote: 'NAVER 편의정보에서 콜키지 태그 미검출',
+      memo: `NAVER 편의정보 원본: ${facilities.join(', ') || '없음'}`,
+    };
+  }
+
+  return {
+    status: 'unknown',
+    corkageFee: null,
+    feeUnit: null,
+    conditionNote: '콜키지 가능 여부 추가 확인 필요',
+    memo: `NAVER 편의정보 원본: ${facilities.join(', ') || '없음'}`,
+  };
+}
+
 function normalizeText(value) {
-  return typeof value === 'string' ? value.trim() : '';
+  return value === undefined || value === null ? '' : String(value).trim();
 }
 
 function inferDistrict(address) {
   const parts = address.split(/\s+/).filter(Boolean);
+  const regionParts = [];
+
+  for (const part of parts) {
+    if (regionParts.length === 0 && /[시도]$/.test(part)) {
+      regionParts.push(part);
+      continue;
+    }
+
+    if (regionParts.length > 0 && /[시군구]$/.test(part)) {
+      regionParts.push(part);
+      continue;
+    }
+
+    if (
+      regionParts.length > 0 &&
+      (/[읍면]$/.test(part) || (/[동]$/.test(part) && part.length <= 4))
+    ) {
+      regionParts.push(part);
+    }
+
+    break;
+  }
+
+  if (regionParts.length > 0) {
+    return regionParts.join(' ');
+  }
 
   return parts.slice(0, 4).join(' ') || '지역 미분류';
 }
@@ -194,4 +343,13 @@ function mapServiceCategory(categoryRaw) {
   if (categoryRaw.includes('일식') || categoryRaw.includes('스시') || categoryRaw.includes('초밥')) return '일식';
 
   return categoryRaw || '일반 음식점';
+}
+
+function ensureStoreSchema(database) {
+  const columns = database.prepare('PRAGMA table_info(stores)').all();
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has('raw_facilities_json')) {
+    database.exec('ALTER TABLE stores ADD COLUMN raw_facilities_json TEXT');
+  }
 }

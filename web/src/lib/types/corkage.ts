@@ -35,6 +35,7 @@ export type CorkageStore = {
   websiteUrl?: string;
   externalReferenceUrl?: string;
   memo?: string;
+  rawFacilities?: string[];
   corkageStatus: CorkageStatus;
   freshnessState: FreshnessState;
   confidenceLabel: ConfidenceLabel;

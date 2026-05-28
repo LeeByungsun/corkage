@@ -39,7 +39,11 @@ describe('store-database', () => {
   it('filters imported DB stores by selected district', () => {
     replaceStoresInDatabase([
       buildStore({ placeId: 'db-gangnam', district: '강남' }),
-      buildStore({ placeId: 'db-dongtan', district: '경기 화성시 동탄구 청계동' }),
+      buildStore({
+        placeId: 'db-dongtan',
+        district: '경기 화성시 동탄구 청계동',
+        rawFacilities: ['콜키지 가능 (무료)', '예약'],
+      }),
     ]);
 
     expect(listDistrictsFromDatabase()).toEqual([
@@ -47,7 +51,10 @@ describe('store-database', () => {
       '경기 화성시 동탄구 청계동',
     ]);
     expect(readStoresFromDatabase({ district: '경기 화성시 동탄구 청계동' })).toEqual([
-      expect.objectContaining({ placeId: 'db-dongtan' }),
+      expect.objectContaining({
+        placeId: 'db-dongtan',
+        rawFacilities: ['콜키지 가능 (무료)', '예약'],
+      }),
     ]);
   });
 

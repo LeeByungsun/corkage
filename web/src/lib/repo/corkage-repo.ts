@@ -233,6 +233,14 @@ export function getFeeLabel(store: CorkageStore): string | null {
     return '반입 불가 안내';
   }
 
+  if (store.corkageStatus === 'unknown') {
+    return null;
+  }
+
+  if (store.feeUnit === 'free') {
+    return FEE_UNIT_LABELS.free;
+  }
+
   if (!shouldShowFeeDetails(store)) {
     return null;
   }
@@ -241,13 +249,15 @@ export function getFeeLabel(store: CorkageStore): string | null {
     return '비용 문의 필요';
   }
 
-  if (store.feeUnit === 'free') {
-    return FEE_UNIT_LABELS.free;
-  }
-
   const formatted = new Intl.NumberFormat('ko-KR').format(store.corkageFee);
 
   return `${formatted}원 / ${FEE_UNIT_LABELS[store.feeUnit]}`;
+}
+
+export function getCorkageFacilityLabels(store: CorkageStore): string[] {
+  return (store.rawFacilities ?? []).filter((facility) =>
+    facility.includes('콜키지'),
+  );
 }
 
 export function getVisibilityNote(store: CorkageStore): string {

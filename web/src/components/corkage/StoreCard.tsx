@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  getCorkageFacilityLabels,
   getDisplayStatus,
   getFeeLabel,
   getVisibilityNote,
@@ -25,6 +26,7 @@ export function StoreCard({
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
+  const corkageFacilities = getCorkageFacilityLabels(store);
   const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
     .filter(Boolean)
     .join(' ');
@@ -77,6 +79,15 @@ export function StoreCard({
       </dl>
 
       <p className="card__notice">{getVisibilityNote(store)}</p>
+      <p className="card__condition">{store.conditionNote}</p>
+
+      {corkageFacilities.length > 0 ? (
+        <div className="facility-tags" aria-label="네이버 편의정보 콜키지 태그">
+          {corkageFacilities.map((facility) => (
+            <span key={facility}>{facility}</span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="card__actions">
         <button

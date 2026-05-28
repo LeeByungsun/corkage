@@ -90,6 +90,7 @@ main {
 .helper-text,
 .card__address,
 .card__notice,
+.card__condition,
 .info-panel li,
 .detail-card dd,
 .detail-hero p {
@@ -418,6 +419,7 @@ main {
 .status-pill,
 .selection-badge,
 .nearest-badge,
+.facility-tags span,
 .trust-badge,
 .review-state {
   display: inline-flex;
@@ -439,6 +441,17 @@ main {
 .nearest-badge {
   background: rgba(123, 63, 0, 0.12);
   color: var(--accent-strong);
+}
+
+.facility-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.facility-tags span {
+  background: #edf4e8;
+  color: #315722;
 }
 
 .card__select-button--selected {

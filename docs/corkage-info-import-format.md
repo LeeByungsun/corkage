@@ -8,6 +8,23 @@ NAVER place 후보는 `stores` 테이블에 먼저 적재하고, 콜키지 가�
 
 ## 실행
 
+### 음식점 + NAVER 편의정보 통합 결과 적재
+
+`docs/research_notes.md`의 `tool/getid/get_ids.js` 결과처럼 음식점 후보와
+`corkageAllowed`, `corkageFee`, `facilities`가 함께 들어있는 JSON은
+stores import 경로로 바로 적재합니다.
+
+```bash
+cd web
+CORKAGE_IMPORT_VERIFIED_AT=2026-05-28 npm run db:import:stores -- ../tool/getid/results_경기도_화성시_청계동_음식점.json
+```
+
+이 경로는 `facilities` 중 `"콜키지"` 태그를 `rawFacilities`에 보존하고,
+`콜키지 가능 (무료)`는 `available + free`, `콜키지 가능 (유료)`는
+`available + 비용 문의 필요`, 태그 미검출은 `unavailable`로 정규화합니다.
+
+### 콜키지 사실 정보만 후속 갱신
+
 ```bash
 cd web
 npm run db:import:corkage -- path/to/corkage-info.json
