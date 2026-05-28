@@ -49,6 +49,23 @@ export type CorkageStore = {
   glassServiceAvailable?: boolean;
 };
 
+export type CorkageInfoUpdate = {
+  placeId: string;
+  corkageStatus: CorkageStatus;
+  verifiedAt: string;
+  sourceType: SourceType;
+  sourceNote: string;
+  freshnessState?: FreshnessState;
+  confidenceLabel?: ConfidenceLabel;
+  conditionNote?: string;
+  corkageFee?: number;
+  feeUnit?: FeeUnit;
+  bottleLimit?: number;
+  alcoholTypeLimit?: string;
+  glassServiceAvailable?: boolean;
+  memo?: string;
+};
+
 export type StoreFilterInput = {
   status?: StoreFilterStatus;
   district?: string;

@@ -7,6 +7,7 @@ import {
   readStoreFromDatabase,
   readStoresFromDatabase,
   replaceStoresInDatabase,
+  updateCorkageInfoInDatabase,
 } from './store-database';
 import type { CorkageStore } from '../types/corkage';
 
@@ -48,6 +49,55 @@ describe('store-database', () => {
     expect(readStoresFromDatabase({ district: '경기 화성시 동탄구 청계동' })).toEqual([
       expect.objectContaining({ placeId: 'db-dongtan' }),
     ]);
+  });
+
+  it('updates corkage facts for preloaded stores by placeId', () => {
+    replaceStoresInDatabase([
+      buildStore({
+        placeId: 'db-dongtan',
+        district: '경기 화성시 동탄구 청계동',
+        corkageStatus: 'unknown',
+        conditionNote: '검수 전',
+      }),
+    ]);
+
+    const results = updateCorkageInfoInDatabase([
+      {
+        placeId: 'db-dongtan',
+        corkageStatus: 'available',
+        verifiedAt: '2026-05-28',
+        sourceType: 'store_direct',
+        sourceNote: '매장 통화 확인',
+        conditionNote: '병당 15,000원',
+        corkageFee: 15000,
+        feeUnit: 'per_bottle',
+        bottleLimit: 2,
+        glassServiceAvailable: true,
+      },
+      {
+        placeId: 'missing-place',
+        corkageStatus: 'unavailable',
+        verifiedAt: '2026-05-28',
+        sourceType: 'operator_verified',
+        sourceNote: '운영자 확인',
+      },
+    ]);
+
+    expect(results).toEqual([
+      { placeId: 'db-dongtan', updated: true },
+      { placeId: 'missing-place', updated: false },
+    ]);
+    expect(readStoreFromDatabase('db-dongtan')).toMatchObject({
+      corkageStatus: 'available',
+      confidenceLabel: 'high',
+      sourceType: 'store_direct',
+      sourceNote: '매장 통화 확인',
+      conditionNote: '병당 15,000원',
+      corkageFee: 15000,
+      feeUnit: 'per_bottle',
+      bottleLimit: 2,
+      glassServiceAvailable: true,
+    });
   });
 });
 

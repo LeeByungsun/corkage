@@ -6,6 +6,7 @@ import type {
   ConfidenceLabel,
   CorkageStatus,
   CorkageStore,
+  CorkageInfoUpdate,
   FeeUnit,
   FreshnessState,
   SourceType,
@@ -178,6 +179,82 @@ export function replaceStoresInDatabase(stores: CorkageStore[]) {
   }
 }
 
+export function updateCorkageInfoInDatabase(updates: CorkageInfoUpdate[]) {
+  const database = openStoreDatabase();
+
+  try {
+    database.exec('BEGIN');
+    const statement = database.prepare(`
+      UPDATE stores
+      SET
+        corkage_status = :corkageStatus,
+        freshness_state = :freshnessState,
+        confidence_label = :confidenceLabel,
+        verified_at = :verifiedAt,
+        source_type = :sourceType,
+        source_note = :sourceNote,
+        condition_note = :conditionNote,
+        corkage_fee = :corkageFee,
+        fee_unit = :feeUnit,
+        bottle_limit = :bottleLimit,
+        alcohol_type_limit = :alcoholTypeLimit,
+        glass_service_available = :glassServiceAvailable,
+        memo = :memo,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE place_id = :placeId
+    `);
+    const results = updates.map((update) => {
+      const current = database
+        .prepare('SELECT * FROM stores WHERE place_id = ?')
+        .get(update.placeId) as StoreRow | undefined;
+
+      if (!current) {
+        return {
+          placeId: update.placeId,
+          updated: false,
+        };
+      }
+
+      statement.run({
+        placeId: update.placeId,
+        corkageStatus: update.corkageStatus,
+        freshnessState: update.freshnessState ?? 'fresh',
+        confidenceLabel:
+          update.confidenceLabel ?? getDefaultConfidenceLabel(update.sourceType),
+        verifiedAt: update.verifiedAt,
+        sourceType: update.sourceType,
+        sourceNote: update.sourceNote,
+        conditionNote: update.conditionNote ?? current.condition_note,
+        corkageFee: update.corkageFee ?? current.corkage_fee ?? null,
+        feeUnit: update.feeUnit ?? current.fee_unit ?? null,
+        bottleLimit: update.bottleLimit ?? current.bottle_limit ?? null,
+        alcoholTypeLimit:
+          update.alcoholTypeLimit ?? current.alcohol_type_limit ?? null,
+        glassServiceAvailable:
+          update.glassServiceAvailable === undefined
+            ? current.glass_service_available ?? null
+            : update.glassServiceAvailable
+              ? 1
+              : 0,
+        memo: update.memo ?? current.memo ?? null,
+      });
+
+      return {
+        placeId: update.placeId,
+        updated: true,
+      };
+    });
+
+    database.exec('COMMIT');
+    return results;
+  } catch (error) {
+    database.exec('ROLLBACK');
+    throw error;
+  } finally {
+    database.close();
+  }
+}
+
 function seedDatabaseIfEmpty(database: DatabaseSync) {
   const row = database.prepare('SELECT COUNT(*) AS count FROM stores').get() as {
     count: number;
@@ -188,6 +265,19 @@ function seedDatabaseIfEmpty(database: DatabaseSync) {
   }
 
   upsertStores(database, corkageSeed);
+}
+
+function getDefaultConfidenceLabel(sourceType: SourceType): ConfidenceLabel {
+  switch (sourceType) {
+    case 'operator_verified':
+    case 'store_direct':
+      return 'high';
+    case 'partner_data':
+    case 'user_report_reviewed':
+      return 'medium';
+    case 'public_web_reference':
+      return 'low';
+  }
 }
 
 function upsertStores(database: DatabaseSync, stores: CorkageStore[]) {
