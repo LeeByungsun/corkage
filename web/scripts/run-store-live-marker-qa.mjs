@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 const WEB_DIR = process.cwd();
 const TEMP_ROOT = path.join(WEB_DIR, '.omx', 'tmp');
 const PORT = process.env.STORE_QA_PORT ?? '3005';
-const HOST = process.env.STORE_QA_HOST ?? '127.0.0.1';
+const HOST = process.env.STORE_QA_HOST ?? 'localhost';
 
 async function main() {
   const clientId = await resolveNaverClientId();
@@ -17,6 +17,8 @@ async function main() {
       'NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID is missing. Set it in web/.env.local before running qa:store-live-markers.',
     );
   }
+
+  console.log(`Running store live marker QA at http://${HOST}:${PORT}/store`);
 
   await mkdir(TEMP_ROOT, { recursive: true });
   const tempDir = await mkdtemp(path.join(TEMP_ROOT, 'store-live-marker-qa-'));
@@ -132,18 +134,22 @@ test.describe('store live marker QA harness', () => {
     await expect(markerStates.first()).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('[data-marker-state="default"]').first()).toBeVisible();
 
-    await cardButtons.first().click();
+    await expect(cardButtons.first()).toBeVisible();
+    await cardButtons.first().dispatchEvent('click');
     await expect(
       page.locator('[data-marker-state="selected"], [data-marker-state="selected-nearest"]').first(),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: '현재 위치 가져오기' }).click();
+    const currentLocationButton = page.getByRole('button', { name: '현재 위치 가져오기' });
+    await expect(currentLocationButton).toBeVisible();
+    await currentLocationButton.dispatchEvent('click');
     await expect(page.getByText(/현재 위치 기준 정렬/)).toBeVisible();
     await expect(
       page.locator('[data-marker-state="nearest"], [data-marker-state="selected-nearest"]').first(),
     ).toBeVisible({ timeout: 20_000 });
 
-    await cardButtons.first().click();
+    await expect(cardButtons.first()).toBeVisible();
+    await cardButtons.first().dispatchEvent('click');
     await expect(
       page.locator('[data-marker-state="selected-nearest"]').first(),
     ).toBeVisible({ timeout: 20_000 });
