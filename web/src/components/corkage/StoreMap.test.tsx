@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { StoreMap } from './StoreMap';
 import { getStoreById } from '../../lib/repo/corkage-repo';
@@ -20,6 +21,13 @@ type MockMarkerOptions = {
   icon?: { content: string };
   zIndex?: number;
 };
+type MockMapInstance = {
+  destroy: ReturnType<typeof vi.fn>;
+  fitBounds: ReturnType<typeof vi.fn>;
+  getBounds: ReturnType<typeof vi.fn>;
+  setCenter: ReturnType<typeof vi.fn>;
+  setZoom: ReturnType<typeof vi.fn>;
+};
 
 vi.mock('../../lib/map/naver-maps-loader', () => ({
   getNaverMapsScriptUrl: vi.fn((clientId: string) => `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`),
@@ -38,8 +46,9 @@ function setupLiveMapMocks({
 
     return { remove: vi.fn() };
   });
+  const mapInstances: MockMapInstance[] = [];
   const mapConstructor = vi.fn(function MapMock() {
-    return {
+    const mapInstance = {
       fitBounds: vi.fn(),
       getBounds: vi.fn(() => ({
         north: () => 37.54,
@@ -51,6 +60,10 @@ function setupLiveMapMocks({
       setZoom: vi.fn(),
       destroy: vi.fn(),
     };
+
+    mapInstances.push(mapInstance);
+
+    return mapInstance;
   });
   const markerInstances: MockMarkerInstance[] = [];
   const markerConstructor = vi.fn(function MarkerMock(_options?: MockMarkerOptions) {
@@ -80,6 +93,7 @@ function setupLiveMapMocks({
     addListener,
     latLngConstructor,
     mapConstructor,
+    mapInstances,
     markerConstructor,
     markerInstances,
   };
@@ -291,6 +305,12 @@ describe('StoreMap', () => {
     await waitFor(() => expect(markerConstructor).toHaveBeenCalledTimes(2));
 
     expect(mapConstructor).toHaveBeenCalledTimes(1);
+    const mapInstance = mapConstructor.mock.results[0]?.value as
+      | { setCenter: ReturnType<typeof vi.fn>; setZoom: ReturnType<typeof vi.fn> }
+      | undefined;
+    expect(mapInstance).toBeDefined();
+    expect(mapInstance?.setCenter).not.toHaveBeenCalled();
+    expect(mapInstance?.setZoom).not.toHaveBeenCalled();
     const firstMarkerOptions = markerConstructor.mock.calls[0]?.[0] as
       | MockMarkerOptions
       | undefined;
@@ -343,6 +363,8 @@ describe('StoreMap', () => {
 
     expect(mapConstructor).toHaveBeenCalledTimes(1);
     expect(markerConstructor).toHaveBeenCalledTimes(2);
+    expect(mapInstance?.setCenter).not.toHaveBeenCalled();
+    expect(mapInstance?.setZoom).not.toHaveBeenCalled();
 
     const deselectedMarkerContent =
       markerInstances[0]?.setIcon.mock.lastCall?.[0].content ?? '';
@@ -354,6 +376,117 @@ describe('StoreMap', () => {
     expect(selectedNearestMarkerContent).toContain('data-marker-state="selected-nearest"');
     expect(markerInstances[0]?.setZIndex).toHaveBeenLastCalledWith(10);
     expect(markerInstances[1]?.setZIndex).toHaveBeenLastCalledWith(30);
+  });
+
+  it('selects a live marker without changing the current map viewport', async () => {
+    markerClickHandlers.length = 0;
+
+    const {
+      mapConstructor,
+      mapInstances,
+      markerConstructor,
+      markerInstances,
+    } = setupLiveMapMocks({ captureClickHandlers: true });
+
+    const stores: StoreWithDistance[] = [
+      {
+        placeId: 'selected-store',
+        name: '선택 식당',
+        address: '서울시 강남구 1',
+        roadAddress: '서울시 강남구 1',
+        lat: 37.5252,
+        lng: 127.0482,
+        category: '다이닝',
+        district: '강남',
+        corkageStatus: 'available',
+        freshnessState: 'fresh',
+        confidenceLabel: 'high',
+        verifiedAt: '2026-05-22',
+        sourceType: 'operator_verified',
+        sourceNote: '테스트',
+        conditionNote: '테스트',
+      },
+      {
+        placeId: 'other-store',
+        name: '다른 식당',
+        address: '서울시 강남구 2',
+        roadAddress: '서울시 강남구 2',
+        lat: 37.5262,
+        lng: 127.0492,
+        category: '다이닝',
+        district: '강남',
+        corkageStatus: 'available',
+        freshnessState: 'fresh',
+        confidenceLabel: 'high',
+        verifiedAt: '2026-05-22',
+        sourceType: 'operator_verified',
+        sourceNote: '테스트',
+        conditionNote: '테스트',
+      },
+    ];
+    const onSelectPlaceId = vi.fn();
+    function StoreMapSelectionHarness() {
+      const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+
+      return (
+        <StoreMap
+          clientId="test-client-id"
+          stores={stores}
+          currentLocation={null}
+          locationError=""
+          locationLoading={false}
+          nearestPlaceId={null}
+          onRequestCurrentLocation={() => {}}
+          onMoveToCurrentLocation={() => {}}
+          onSelectPlaceId={(placeId) => {
+            onSelectPlaceId(placeId);
+            setSelectedPlaceId(placeId);
+          }}
+          onBoundsChange={() => {}}
+          selectedPlaceId={selectedPlaceId}
+        />
+      );
+    }
+
+    render(<StoreMapSelectionHarness />);
+
+    await waitFor(() => expect(markerConstructor).toHaveBeenCalledTimes(2));
+
+    const firstMarkerOptions = markerConstructor.mock.calls[0]?.[0] as
+      | MockMarkerOptions
+      | undefined;
+    const mapInstance = mapInstances[0]!;
+
+    expect(firstMarkerOptions?.icon?.content).toContain('data-marker-state="default"');
+
+    mapInstance.fitBounds.mockClear();
+    mapInstance.setCenter.mockClear();
+    mapInstance.setZoom.mockClear();
+
+    markerInstances.forEach((marker) => {
+      marker.setIcon.mockClear();
+      marker.setZIndex.mockClear();
+    });
+
+    await act(async () => {
+      markerClickHandlers[0]!();
+    });
+    expect(onSelectPlaceId).toHaveBeenCalledWith('selected-store');
+
+    expect(await screen.findByText('선택한 식당')).toBeInTheDocument();
+    await waitFor(() => expect(markerInstances[0]?.setIcon).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const selectedMarkerContent =
+      markerInstances[0]?.setIcon.mock.lastCall?.[0].content ?? '';
+
+    expect(selectedMarkerContent).toContain('data-marker-state="selected"');
+    expect(markerInstances[0]?.setZIndex).toHaveBeenLastCalledWith(30);
+    expect(mapConstructor).toHaveBeenCalledTimes(1);
+    expect(markerConstructor).toHaveBeenCalledTimes(2);
+    expect(mapInstance.fitBounds).not.toHaveBeenCalled();
+    expect(mapInstance.setCenter).not.toHaveBeenCalled();
+    expect(mapInstance.setZoom).not.toHaveBeenCalled();
   });
 
   it('keeps the live map mounted when equivalent store arrays or current location updates arrive', async () => {
@@ -467,7 +600,10 @@ describe('StoreMap', () => {
             verifiedAt: '2026-05-22',
             sourceType: 'operator_verified',
             sourceNote: '테스트',
-            conditionNote: '테스트',
+            conditionNote: '750ml 와인 기준, 사전 예약 시 반입 가능',
+            corkageFee: 15000,
+            feeUnit: 'per_bottle',
+            rawFacilities: ['콜키지 가능', '예약', '룸'],
           },
         ]}
         currentLocation={null}
@@ -495,9 +631,89 @@ describe('StoreMap', () => {
         '현재 위치 기준 가장 가까운 선택 식당',
       ),
     ).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('가능')).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('15,000원 / 병')).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByText(
+        '750ml 와인 기준, 사전 예약 시 반입 가능',
+      ),
+    ).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('높은 신뢰')).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('최신 기준 안')).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByText(
+        '운영 정책상 canonical 정보만 보수적으로 표시합니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByLabelText(
+        '네이버 편의정보 콜키지 태그',
+      ),
+    ).toHaveTextContent('콜키지 가능');
     expect(selectedButton).toHaveClass('map-point-button--selected');
     expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
     expect(selectedButton.closest('li')).toHaveClass('map-point-item--nearest');
+  });
+
+  it('shows reviewable corkage details in the selected live map summary', async () => {
+    setupLiveMapMocks();
+
+    const selectedStore: StoreWithDistance = {
+      placeId: 'reviewable-store',
+      name: '검수 식당',
+      address: '서울시 강남구 3',
+      roadAddress: '서울시 강남구 3',
+      lat: 37.5272,
+      lng: 127.0502,
+      category: '다이닝',
+      district: '강남',
+      rawFacilities: ['콜키지 가능', '발렛'],
+      corkageStatus: 'available',
+      freshnessState: 'fresh',
+      confidenceLabel: 'high',
+      verifiedAt: '2026-05-22',
+      sourceType: 'store_direct',
+      sourceNote: '매장 유선 확인',
+      conditionNote: '와인 1병까지 반입 가능',
+      corkageFee: 25000,
+      feeUnit: 'per_bottle',
+    };
+
+    render(
+      <StoreMap
+        clientId="test-client-id"
+        stores={[selectedStore]}
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        nearestPlaceId={null}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+        onSelectPlaceId={() => {}}
+        onBoundsChange={() => {}}
+        selectedPlaceId="reviewable-store"
+      />,
+    );
+
+    await waitFor(() => expect(loadNaverMaps).toHaveBeenCalledWith('test-client-id'));
+
+    const selectedSummary = screen.getByText('선택한 식당').closest('.map-selection-card');
+
+    expect(selectedSummary).not.toBeNull();
+    expect(within(selectedSummary as HTMLElement).getByText('검수 식당')).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('가능')).toBeInTheDocument();
+    expect(within(selectedSummary as HTMLElement).getByText('25,000원 / 병')).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByText('와인 1병까지 반입 가능'),
+    ).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByText(
+        '운영 정책상 canonical 정보만 보수적으로 표시합니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(selectedSummary as HTMLElement).getByLabelText('네이버 편의정보 콜키지 태그'),
+    ).toHaveTextContent('콜키지 가능');
   });
 
   it('builds the official NAVER Maps SDK URL with ncpKeyId', () => {

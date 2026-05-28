@@ -10,6 +10,13 @@ import {
   type StoreWithDistance,
 } from '../../lib/map/store-map';
 import { loadNaverMaps } from '../../lib/map/naver-maps-loader';
+import {
+  getCorkageFacilityLabels,
+  getDisplayStatus,
+  getFeeLabel,
+  getVisibilityNote,
+} from '../../lib/repo/corkage-repo';
+import { TrustBadge } from './TrustBadge';
 
 type MarkerInstance = {
   setMap: (map: null) => void;
@@ -291,23 +298,6 @@ export function StoreMap({
     mapInstanceRef.current.setZoom(15);
   }, [currentLocation]);
 
-  useEffect(() => {
-    if (!selectedPlaceId || !mapInstanceRef.current || !naverRef.current) {
-      return;
-    }
-
-    const point = points.find((item) => item.placeId === selectedPlaceId);
-
-    if (!point) {
-      return;
-    }
-
-    mapInstanceRef.current.setCenter(
-      new naverRef.current.maps.LatLng(point.lat, point.lng),
-    );
-    mapInstanceRef.current.setZoom(15);
-  }, [points, selectedPlaceId]);
-
   if (points.length === 0) {
     return (
       <section className="map-panel">
@@ -506,7 +496,9 @@ function SelectedStoreCard({
   store,
 }: SelectedStoreCardProps) {
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
+  const feeLabel = getFeeLabel(store);
   const isNearest = nearestPlaceId === point.placeId;
+  const corkageFacilities = getCorkageFacilityLabels(store);
 
   return (
     <div className="map-selection-card map-selection-card--selected">
@@ -523,6 +515,22 @@ function SelectedStoreCard({
         </div>
       ) : null}
       <span className="muted">{store.roadAddress}</span>
+      <TrustBadge
+        confidenceLabel={store.confidenceLabel}
+        freshnessState={store.freshnessState}
+      />
+      <dl className="card__meta">
+        <div>
+          <dt>상태</dt>
+          <dd>{getDisplayStatus(store)}</dd>
+        </div>
+        {feeLabel ? (
+          <div>
+            <dt>비용</dt>
+            <dd>{feeLabel}</dd>
+          </div>
+        ) : null}
+      </dl>
       {distanceLabel ? (
         <span className="map-selection-card__distance">
           현재 위치 기준 {distanceLabel}
@@ -532,6 +540,15 @@ function SelectedStoreCard({
         <span className="muted">
           {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
         </span>
+      ) : null}
+      <p className="card__condition">{store.conditionNote}</p>
+      <p className="card__notice">{getVisibilityNote(store)}</p>
+      {corkageFacilities.length > 0 ? (
+        <div className="facility-tags" aria-label="네이버 편의정보 콜키지 태그">
+          {corkageFacilities.map((facility) => (
+            <span key={facility}>{facility}</span>
+          ))}
+        </div>
       ) : null}
     </div>
   );
