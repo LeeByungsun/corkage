@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { ReviewQueue } from './ReviewQueue';
-import type { ServerMvpState } from '../../lib/types/corkage';
+import type { CorkageStore, ServerMvpState } from '../../lib/types/corkage';
 
 describe('ReviewQueue', () => {
   let serverState: ServerMvpState;
   let fetchMock: ReturnType<typeof vi.fn>;
+  let baseStores: CorkageStore[];
 
   beforeEach(() => {
     serverState = {
@@ -13,10 +14,32 @@ describe('ReviewQueue', () => {
       canonicalOverrides: [],
       reviewLogs: [],
     };
+    baseStores = [
+      buildStore({
+        placeId: 'seasonal-noodle-lab',
+        name: '시즈널 누들랩',
+        district: '강남',
+      }),
+      buildStore({
+        placeId: 'db-only-dongtan-store',
+        name: 'DB 전용 동탄 식당',
+        district: '경기 화성시 동탄구 청계동',
+      }),
+    ];
     fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
+      const url = String(_input);
 
       if (method === 'GET') {
+        if (url.includes('/api/stores')) {
+          return new Response(JSON.stringify({ stores: baseStores }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+        }
+
         return createJsonResponse(serverState);
       }
 
@@ -200,6 +223,47 @@ describe('ReviewQueue', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('previews accepted overrides for DB-backed placeIds', async () => {
+    serverState.draftReports = [
+      {
+        reportId: 'draft-test-db-only',
+        storeMatchType: 'existing',
+        placeId: 'db-only-dongtan-store',
+        storeName: 'DB 전용 동탄 식당',
+        reportType: 'status',
+        reportedStatus: 'available',
+        reportedFee: 15000,
+        memo: 'DB-only 식당 제보',
+        submittedAt: '2026-05-28',
+        reviewState: 'pending',
+      },
+    ];
+
+    render(<ReviewQueue />);
+
+    const draftCard = await findDraftCard('DB 전용 동탄 식당');
+
+    fireEvent.change(within(draftCard).getByLabelText('검수 상태'), {
+      target: { value: 'accepted' },
+    });
+
+    await waitFor(() =>
+      expect(serverState.canonicalOverrides[0]).toMatchObject({
+        placeId: 'db-only-dongtan-store',
+        sourceType: 'user_report_reviewed',
+      }),
+    );
+
+    expect(
+      within(draftCard).getByText(
+        'accepted 시 db-only-dongtan-store canonical override preview를 만들 수 있습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(draftCard).getByText('canonical 반영 preview'),
+    ).toBeInTheDocument();
+  });
 });
 
 async function findDraftCard(name: string): Promise<HTMLElement> {
@@ -220,4 +284,25 @@ function createJsonResponse(data: ServerMvpState, status = 200) {
       'Content-Type': 'application/json',
     },
   });
+}
+
+function buildStore(overrides: Partial<CorkageStore>): CorkageStore {
+  return {
+    placeId: 'base-store',
+    name: '기본 식당',
+    address: '서울시 강남구 압구정로 10',
+    roadAddress: '서울시 강남구 압구정로 10',
+    lat: 37.527,
+    lng: 127.028,
+    category: '다이닝',
+    district: '강남',
+    corkageStatus: 'unknown',
+    freshnessState: 'fresh',
+    confidenceLabel: 'low',
+    verifiedAt: '2026-05-28',
+    sourceType: 'public_web_reference',
+    sourceNote: '테스트 DB 후보',
+    conditionNote: '검수 전',
+    ...overrides,
+  };
 }

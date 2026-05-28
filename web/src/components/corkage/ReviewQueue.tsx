@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   buildCanonicalPreviewFromAcceptedReport,
   isExistingStoreReport,
-  getAllStores,
   getReports,
   mergeStores,
   transitionReportReviewState,
 } from '../../lib/repo/corkage-repo';
+import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
 import {
   readCanonicalOverrides,
 } from '../../lib/repo/canonical-overrides';
@@ -79,7 +79,7 @@ export function ReviewQueue() {
 
   const seededReports = useMemo(() => getReports(), []);
   const reports = [...draftReports, ...seededReports];
-  const currentStores = mergeStores(getAllStores(), canonicalOverrides);
+  const currentStores = useCanonicalStores();
 
   async function handleReviewChange(
     report: CorkageReport,
@@ -152,7 +152,7 @@ export function ReviewQueue() {
     }
 
     return mergeStores(
-      getAllStores(),
+      currentStores,
       canonicalOverrides.filter((store) => store.placeId !== report.placeId),
     );
   }

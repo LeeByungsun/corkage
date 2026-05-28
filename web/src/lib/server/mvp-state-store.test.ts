@@ -6,17 +6,22 @@ import {
   readServerMvpState,
   updateServerDraftReportReview,
 } from './mvp-state-store';
+import { getStoreById } from '../repo/corkage-repo';
+import { replaceStoresInDatabase } from './store-database';
 
 describe('mvp-state-store', () => {
   let stateDir: string;
   let stateFilePath: string;
   let previousStateFilePath: string | undefined;
+  let previousStoreDbFilePath: string | undefined;
 
   beforeEach(async () => {
     stateDir = await mkdtemp(path.join(tmpdir(), 'corkage-mvp-state-'));
     stateFilePath = path.join(stateDir, 'mvp-state.json');
     previousStateFilePath = process.env.CORKAGE_MVP_STATE_FILE;
+    previousStoreDbFilePath = process.env.CORKAGE_STORE_DB_FILE;
     process.env.CORKAGE_MVP_STATE_FILE = stateFilePath;
+    process.env.CORKAGE_STORE_DB_FILE = path.join(stateDir, 'stores.sqlite');
   });
 
   afterEach(async () => {
@@ -24,6 +29,12 @@ describe('mvp-state-store', () => {
       delete process.env.CORKAGE_MVP_STATE_FILE;
     } else {
       process.env.CORKAGE_MVP_STATE_FILE = previousStateFilePath;
+    }
+
+    if (previousStoreDbFilePath === undefined) {
+      delete process.env.CORKAGE_STORE_DB_FILE;
+    } else {
+      process.env.CORKAGE_STORE_DB_FILE = previousStoreDbFilePath;
     }
 
     await rm(stateDir, { force: true, recursive: true });
@@ -151,6 +162,55 @@ describe('mvp-state-store', () => {
       appliedAt: undefined,
     });
     expect(nextState.canonicalOverrides).toEqual([]);
+  });
+
+  it('applies accepted existing reports to DB-only store placeIds', async () => {
+    const baseStore = getStoreById('seoul-vin-table');
+
+    expect(baseStore).toBeDefined();
+
+    replaceStoresInDatabase([
+      {
+        ...baseStore!,
+        placeId: 'db-only-dongtan-store',
+        name: 'DB 전용 동탄 식당',
+        district: '경기 화성시 동탄구 청계동',
+      },
+    ]);
+
+    await createServerDraftReport({
+      reportId: 'draft-server-db-only',
+      storeMatchType: 'existing',
+      placeId: 'db-only-dongtan-store',
+      storeName: 'DB 전용 동탄 식당',
+      reportType: 'status',
+      reportedStatus: 'available',
+      reportedFee: 15000,
+      memo: 'DB-only 식당 accepted 반영 테스트',
+      submittedAt: '2026-05-28',
+      reviewState: 'pending',
+    });
+
+    const nextState = await updateServerDraftReportReview(
+      'draft-server-db-only',
+      {
+        reviewState: 'accepted',
+        reviewNote: 'DB 기반 식당 검수 완료',
+        reviewedAt: '2026-05-28',
+      },
+    );
+
+    expect(nextState.canonicalOverrides[0]).toMatchObject({
+      placeId: 'db-only-dongtan-store',
+      corkageStatus: 'available',
+      corkageFee: 15000,
+      sourceType: 'user_report_reviewed',
+      sourceNote: 'DB 기반 식당 검수 완료',
+    });
+    expect(nextState.draftReports[0]).toMatchObject({
+      reportId: 'draft-server-db-only',
+      appliedAt: '2026-05-28',
+    });
   });
 
   it('bootstraps an empty state file on first read', async () => {

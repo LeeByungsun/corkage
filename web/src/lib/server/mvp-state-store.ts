@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   applyAcceptedReportToCanonical,
-  getAllStores,
   isExistingStoreReport,
   mergeStores,
   normalizeReport,
@@ -15,6 +14,7 @@ import type {
   ReviewLogEntry,
   ServerMvpState,
 } from '../types/corkage';
+import { readStoresFromDatabase } from './store-database';
 
 const DEFAULT_SERVER_MVP_STATE: ServerMvpState = {
   draftReports: [],
@@ -143,6 +143,7 @@ async function writeDerivedServerMvpState(
 function deriveCanonicalOverridesFromReports(draftReports: CorkageReport[]) {
   let canonicalOverrides: CorkageStore[] = [];
   const appliedReportIds = new Set<string>();
+  const databaseStores = readStoresFromDatabase();
 
   for (const report of [...draftReports].reverse()) {
     if (report.reviewState !== 'accepted' || !isExistingStoreReport(report)) {
@@ -150,7 +151,7 @@ function deriveCanonicalOverridesFromReports(draftReports: CorkageReport[]) {
     }
 
     const comparableStores = mergeStores(
-      getAllStores(),
+      databaseStores,
       canonicalOverrides.filter((store) => store.placeId !== report.placeId),
     );
     const nextStore = applyAcceptedReportToCanonical(report, comparableStores);
