@@ -8,7 +8,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StoreExplorer } from './StoreExplorer';
 
-const mockUseCanonicalStores = vi.hoisted(() => vi.fn());
 const storeMapRenderProps = vi.hoisted(() => [] as Array<{ stores: unknown[] }>);
 const replaceMock = vi.fn();
 
@@ -16,10 +15,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/store',
   useRouter: () => ({ replace: replaceMock }),
   useSearchParams: () => new URLSearchParams('status=all&district=all'),
-}));
-
-vi.mock('../../lib/repo/use-canonical-stores', () => ({
-  useCanonicalStores: mockUseCanonicalStores,
 }));
 
 vi.mock('./StoreMap', () => ({
@@ -62,46 +57,64 @@ vi.mock('./StoreMap', () => ({
   },
 }));
 
+const testStores = [
+  {
+    placeId: 'near-store',
+    name: '가까운 식당',
+    address: '서울시 강남구 1',
+    roadAddress: '서울시 강남구 1',
+    lat: 37.5252,
+    lng: 127.0482,
+    category: '다이닝',
+    district: '강남',
+    corkageStatus: 'available',
+    freshnessState: 'fresh',
+    confidenceLabel: 'high',
+    verifiedAt: '2026-05-22',
+    sourceType: 'operator_verified',
+    sourceNote: '테스트',
+    conditionNote: '테스트',
+  },
+  {
+    placeId: 'far-store',
+    name: '먼 식당',
+    address: '서울시 성수구 2',
+    roadAddress: '서울시 성수구 2',
+    lat: 37.5602,
+    lng: 127.1502,
+    category: '비스트로',
+    district: '성수',
+    corkageStatus: 'available',
+    freshnessState: 'fresh',
+    confidenceLabel: 'medium',
+    verifiedAt: '2026-05-22',
+    sourceType: 'operator_verified',
+    sourceNote: '테스트',
+    conditionNote: '테스트',
+  },
+] as const;
+
+const testDistricts = ['강남', '성수'];
+
+function renderStoreExplorer() {
+  return render(
+    <StoreExplorer
+      district="all"
+      districts={[...testDistricts]}
+      initialRadius="all"
+      initialSelectedPlaceId=""
+      initialSort="default"
+      maxFeeInput=""
+      status="all"
+      stores={[...testStores]}
+    />,
+  );
+}
+
 describe('StoreExplorer', () => {
   beforeEach(() => {
     replaceMock.mockReset();
     storeMapRenderProps.length = 0;
-    mockUseCanonicalStores.mockReturnValue([
-      {
-        placeId: 'near-store',
-        name: '가까운 식당',
-        address: '서울시 강남구 1',
-        roadAddress: '서울시 강남구 1',
-        lat: 37.5252,
-        lng: 127.0482,
-        category: '다이닝',
-        district: '강남',
-        corkageStatus: 'available',
-        freshnessState: 'fresh',
-        confidenceLabel: 'high',
-        verifiedAt: '2026-05-22',
-        sourceType: 'operator_verified',
-        sourceNote: '테스트',
-        conditionNote: '테스트',
-      },
-      {
-        placeId: 'far-store',
-        name: '먼 식당',
-        address: '서울시 성수구 2',
-        roadAddress: '서울시 성수구 2',
-        lat: 37.5602,
-        lng: 127.1502,
-        category: '비스트로',
-        district: '성수',
-        corkageStatus: 'available',
-        freshnessState: 'fresh',
-        confidenceLabel: 'medium',
-        verifiedAt: '2026-05-22',
-        sourceType: 'operator_verified',
-        sourceNote: '테스트',
-        conditionNote: '테스트',
-      },
-    ]);
 
     vi.stubGlobal('navigator', {
       geolocation: {
@@ -124,7 +137,7 @@ describe('StoreExplorer', () => {
   });
 
   it('gets current location and sorts stores by nearest first', async () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
 
@@ -146,7 +159,7 @@ describe('StoreExplorer', () => {
   });
 
   it('applies radius filter after current location is available', async () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
 
@@ -164,7 +177,7 @@ describe('StoreExplorer', () => {
   });
 
   it('syncs marker selection and card selection in both directions', () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     fireEvent.click(screen.getByRole('button', { name: '먼 식당 마커 선택' }));
 
@@ -183,7 +196,7 @@ describe('StoreExplorer', () => {
   });
 
   it('limits the list to stores inside the current map bounds', () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     fireEvent.click(screen.getByRole('button', { name: '지도 bounds 좁히기' }));
 
@@ -193,7 +206,7 @@ describe('StoreExplorer', () => {
   });
 
   it('keeps map input stable when only bounds-filtered list state changes', () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     const initialMapStores = storeMapRenderProps.at(-1)?.stores;
 
@@ -204,7 +217,7 @@ describe('StoreExplorer', () => {
   });
 
   it('writes selected/sort/radius state back to the URL query', async () => {
-    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+    renderStoreExplorer();
 
     fireEvent.click(screen.getByRole('button', { name: '현재 위치 가져오기' }));
     await waitFor(() => expect(replaceMock).toHaveBeenCalled());

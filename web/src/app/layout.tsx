@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Corkage MVP',
-  description: '정적 seed 데이터 기반 콜키지 식당 웹 MVP',
+  description: 'DB 기반 콜키지 식당 웹 MVP',
 };
 
 type RootLayoutProps = {

@@ -29,6 +29,7 @@ export type CorkageStore = {
   lat: number;
   lng: number;
   category: string;
+  categoryRaw?: string;
   district: string;
   phone?: string;
   websiteUrl?: string;

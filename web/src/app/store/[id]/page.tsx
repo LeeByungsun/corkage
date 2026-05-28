@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
 import { StoreDetailView } from '../../../components/corkage/StoreDetailView';
-import { getStoreById } from '../../../lib/repo/corkage-repo';
+import { readCanonicalStoreById } from '../../../lib/server/canonical-store-service';
 
-export default function StoreDetailPage({ params }: { params: { id: string } }) {
-  const store = getStoreById(params.id);
+export const dynamic = 'force-dynamic';
+
+export default async function StoreDetailPage({ params }: { params: { id: string } }) {
+  const store = await readCanonicalStoreById(params.id);
   if (!store) notFound();
 
-  return <StoreDetailView placeId={params.id} />;
+  return <StoreDetailView store={store} />;
 }

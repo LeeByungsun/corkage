@@ -14,6 +14,7 @@ import { loadNaverMaps } from '../../lib/map/naver-maps-loader';
 type MarkerInstance = {
   setMap: (map: null) => void;
   setIcon?: (icon: MarkerIcon) => void;
+  setPosition?: (position: unknown) => void;
   setZIndex?: (zIndex: number) => void;
 };
 
@@ -57,6 +58,13 @@ export function StoreMap({
     [stores],
   );
   const center = useMemo(() => getStoreMapCenter(points), [points]);
+  const pointsSignature = useMemo(
+    () =>
+      points
+        .map((point) => `${point.placeId}:${point.lat}:${point.lng}:${point.name}`)
+        .join('|'),
+    [points],
+  );
   const selectedPoint = useMemo(
     () =>
       selectedPlaceId
@@ -81,10 +89,18 @@ export function StoreMap({
   } | null>(null);
   const naverRef = useRef<Awaited<ReturnType<typeof loadNaverMaps>> | null>(null);
   const markerInstancesRef = useRef<Map<string, MarkerInstance>>(new Map());
+  const currentLocationMarkerRef = useRef<MarkerInstance | null>(null);
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onSelectPlaceIdRef = useRef(onSelectPlaceId);
   const selectedPlaceIdRef = useRef(selectedPlaceId);
   const nearestPlaceIdRef = useRef(nearestPlaceId);
+  const pointsRef = useRef(points);
+  const centerRef = useRef(center);
+  const currentLocationRef = useRef(currentLocation);
+
+  pointsRef.current = points;
+  centerRef.current = center;
+  currentLocationRef.current = currentLocation;
 
   useEffect(() => {
     onBoundsChangeRef.current = onBoundsChange;
@@ -100,7 +116,7 @@ export function StoreMap({
   }, [nearestPlaceId, selectedPlaceId]);
 
   useEffect(() => {
-    if (!clientId || !mapRef.current || points.length === 0) {
+    if (!clientId || !mapRef.current || pointsRef.current.length === 0) {
       markerInstancesRef.current = new Map();
       onBoundsChangeRef.current(null);
       return;
@@ -112,7 +128,6 @@ export function StoreMap({
     const markerListeners: Array<{ remove?: () => void }> = [];
     const markerInstances: MarkerInstance[] = [];
     const markerInstanceMap = new Map<string, MarkerInstance>();
-    let currentLocationMarker: MarkerInstance | null = null;
     let boundsListener: { remove?: () => void } | null = null;
 
     async function mountMap() {
@@ -125,17 +140,18 @@ export function StoreMap({
 
         setLoadError('');
         naverRef.current = naver;
+        const mapPoints = pointsRef.current;
 
-        const fallbackCenter = center ?? { lat: 37.5665, lng: 126.978 };
+        const fallbackCenter = centerRef.current ?? { lat: 37.5665, lng: 126.978 };
         const mapInstance = new naver.maps.Map(mapRef.current, {
           center: new naver.maps.LatLng(fallbackCenter.lat, fallbackCenter.lng),
-          zoom: points.length === 1 ? 15 : 12,
+          zoom: mapPoints.length === 1 ? 15 : 12,
           zoomControl: true,
           mapDataControl: false,
         });
         mapInstanceRef.current = mapInstance;
 
-        for (const point of points) {
+        for (const point of mapPoints) {
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(point.lat, point.lng),
             map: mapInstance,
@@ -159,20 +175,9 @@ export function StoreMap({
         }
         markerInstancesRef.current = markerInstanceMap;
 
-        if (currentLocation) {
-          currentLocationMarker = new naver.maps.Marker({
-            position: new naver.maps.LatLng(currentLocation.lat, currentLocation.lng),
-            map: mapInstance,
-            title: '현재 위치',
-          });
-        }
-
-        const boundsTargets = [
-          ...points.map((point) => new naver.maps.LatLng(point.lat, point.lng)),
-          ...(currentLocation
-            ? [new naver.maps.LatLng(currentLocation.lat, currentLocation.lng)]
-            : []),
-        ];
+        const boundsTargets = mapPoints.map(
+          (point) => new naver.maps.LatLng(point.lat, point.lng),
+        );
 
         if (boundsTargets.length > 1) {
           mapInstance.fitBounds(boundsTargets, {
@@ -182,13 +187,25 @@ export function StoreMap({
             left: 60,
             maxZoom: 15,
           });
-        } else if (currentLocation) {
-          mapInstance.setCenter(
-            new naver.maps.LatLng(currentLocation.lat, currentLocation.lng),
-          );
+        } else if (mapPoints.length === 1) {
+          mapInstance.setCenter(new naver.maps.LatLng(mapPoints[0]!.lat, mapPoints[0]!.lng));
           mapInstance.setZoom(15);
-        } else if (points.length === 1) {
-          mapInstance.setCenter(new naver.maps.LatLng(points[0]!.lat, points[0]!.lng));
+        }
+
+        const initialCurrentLocation = currentLocationRef.current;
+
+        if (initialCurrentLocation) {
+          const position = new naver.maps.LatLng(
+            initialCurrentLocation.lat,
+            initialCurrentLocation.lng,
+          );
+
+          currentLocationMarkerRef.current = new naver.maps.Marker({
+            position,
+            map: mapInstance,
+            title: '현재 위치',
+          });
+          mapInstance.setCenter(position);
           mapInstance.setZoom(15);
         }
 
@@ -223,13 +240,14 @@ export function StoreMap({
       boundsListener?.remove?.();
       markerListeners.forEach((listener) => listener.remove?.());
       markerInstances.forEach((marker) => marker.setMap(null));
-      currentLocationMarker?.setMap(null);
+      currentLocationMarkerRef.current?.setMap(null);
+      currentLocationMarkerRef.current = null;
       markerInstancesRef.current = new Map();
       mapInstanceRef.current?.destroy?.();
       mapInstanceRef.current = null;
       naverRef.current = null;
     };
-  }, [center, clientId, currentLocation, points]);
+  }, [clientId, pointsSignature]);
 
   useEffect(() => {
     for (const point of points) {
@@ -249,12 +267,27 @@ export function StoreMap({
 
   useEffect(() => {
     if (!currentLocation || !mapInstanceRef.current || !naverRef.current) {
+      currentLocationMarkerRef.current?.setMap(null);
+      currentLocationMarkerRef.current = null;
       return;
     }
 
-    mapInstanceRef.current.setCenter(
-      new naverRef.current.maps.LatLng(currentLocation.lat, currentLocation.lng),
+    const position = new naverRef.current.maps.LatLng(
+      currentLocation.lat,
+      currentLocation.lng,
     );
+
+    if (currentLocationMarkerRef.current) {
+      currentLocationMarkerRef.current.setPosition?.(position);
+    } else {
+      currentLocationMarkerRef.current = new naverRef.current.maps.Marker({
+        position,
+        map: mapInstanceRef.current,
+        title: '현재 위치',
+      });
+    }
+
+    mapInstanceRef.current.setCenter(position);
     mapInstanceRef.current.setZoom(15);
   }, [currentLocation]);
 

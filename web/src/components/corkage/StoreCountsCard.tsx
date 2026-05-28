@@ -1,15 +1,16 @@
-'use client';
-
 import { getStoreCountsFromStores } from '../../lib/repo/corkage-repo';
-import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
+import type { CorkageStore } from '../../lib/types/corkage';
 
-export function StoreCountsCard() {
-  const stores = useCanonicalStores();
+type StoreCountsCardProps = {
+  stores: CorkageStore[];
+};
+
+export function StoreCountsCard({ stores }: StoreCountsCardProps) {
   const counts = getStoreCountsFromStores(stores);
 
   return (
     <div className="stats-card">
-      <h2>현재 seed + 로컬 canonical 현황</h2>
+      <h2>현재 DB + 로컬 canonical 현황</h2>
       <dl>
         <div>
           <dt>전체 식당</dt>

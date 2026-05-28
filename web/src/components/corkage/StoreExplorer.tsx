@@ -6,8 +6,7 @@ import {
   filterStoreList,
   listDistrictsFromStores,
 } from '../../lib/repo/corkage-repo';
-import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
-import type { StoreFilterStatus } from '../../lib/types/corkage';
+import type { CorkageStore, StoreFilterStatus } from '../../lib/types/corkage';
 import { StoreMap } from './StoreMap';
 import { StoreList } from './StoreList';
 import {
@@ -44,6 +43,8 @@ type SortMode = (typeof SORT_OPTIONS)[number]['value'];
 type RadiusMode = (typeof RADIUS_OPTIONS)[number]['value'];
 
 type StoreExplorerProps = {
+  stores: CorkageStore[];
+  districts: string[];
   status: string;
   district: string;
   maxFeeInput: string;
@@ -53,6 +54,8 @@ type StoreExplorerProps = {
 };
 
 export function StoreExplorer({
+  stores,
+  districts,
   status,
   district,
   maxFeeInput,
@@ -60,7 +63,6 @@ export function StoreExplorer({
   initialRadius = 'all',
   initialSelectedPlaceId = '',
 }: StoreExplorerProps) {
-  const stores = useCanonicalStores();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -81,7 +83,6 @@ export function StoreExplorer({
 
   const maxFee = Number(maxFeeInput);
   const effectiveMaxFee = Number.isFinite(maxFee) && maxFee > 0 ? maxFee : undefined;
-  const districts = useMemo(() => listDistrictsFromStores(stores), [stores]);
   const baseFilteredStores = useMemo(
     () =>
       filterStoreList(stores, {
@@ -185,6 +186,11 @@ export function StoreExplorer({
     }
 
     const query = params.toString();
+
+    if (query === searchParams.toString()) {
+      return;
+    }
+
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, radiusFilter, router, searchParams, selectedPlaceId, sortMode]);
 

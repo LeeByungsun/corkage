@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "qa:store-live-markers": "node scripts/run-store-live-marker-qa.mjs"
+    "qa:store-live-markers": "node scripts/run-store-live-marker-qa.mjs",
+    "db:import:stores": "node scripts/import-store-database.mjs"
   },
   "dependencies": {
     "next": "14.2.5",

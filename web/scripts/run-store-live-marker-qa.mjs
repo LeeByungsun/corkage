@@ -148,8 +148,12 @@ test.describe('store live marker QA harness', () => {
       page.locator('[data-marker-state="nearest"], [data-marker-state="selected-nearest"]').first(),
     ).toBeVisible({ timeout: 20_000 });
 
-    await expect(cardButtons.first()).toBeVisible();
-    await cardButtons.first().dispatchEvent('click');
+    const nearestMarkerButton = page.locator('.map-point-button', {
+      has: page.getByLabel('현재 위치 기준 가장 가까운 지도 마커'),
+    }).first();
+
+    await expect(nearestMarkerButton).toBeVisible();
+    await nearestMarkerButton.dispatchEvent('click');
     await expect(
       page.locator('[data-marker-state="selected-nearest"]').first(),
     ).toBeVisible({ timeout: 20_000 });

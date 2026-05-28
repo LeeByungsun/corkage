@@ -13,6 +13,7 @@ const markerClickHandlers: Array<() => void> = [];
 type MockMarkerInstance = {
   setIcon: ReturnType<typeof vi.fn>;
   setMap: ReturnType<typeof vi.fn>;
+  setPosition: ReturnType<typeof vi.fn>;
   setZIndex: ReturnType<typeof vi.fn>;
 };
 type MockMarkerOptions = {
@@ -56,6 +57,7 @@ function setupLiveMapMocks({
     const marker = {
       setIcon: vi.fn(),
       setMap: vi.fn(),
+      setPosition: vi.fn(),
       setZIndex: vi.fn(),
     };
     markerInstances.push(marker);
@@ -352,6 +354,93 @@ describe('StoreMap', () => {
     expect(selectedNearestMarkerContent).toContain('data-marker-state="selected-nearest"');
     expect(markerInstances[0]?.setZIndex).toHaveBeenLastCalledWith(10);
     expect(markerInstances[1]?.setZIndex).toHaveBeenLastCalledWith(30);
+  });
+
+  it('keeps the live map mounted when equivalent store arrays or current location updates arrive', async () => {
+    const {
+      mapConstructor,
+      markerConstructor,
+      markerInstances,
+    } = setupLiveMapMocks();
+
+    const store: StoreWithDistance = {
+      placeId: 'stable-store',
+      name: '안정 식당',
+      address: '서울시 강남구 1',
+      roadAddress: '서울시 강남구 1',
+      lat: 37.5252,
+      lng: 127.0482,
+      category: '다이닝',
+      district: '강남',
+      corkageStatus: 'available',
+      freshnessState: 'fresh',
+      confidenceLabel: 'high',
+      verifiedAt: '2026-05-22',
+      sourceType: 'operator_verified',
+      sourceNote: '테스트',
+      conditionNote: '테스트',
+    };
+
+    const { rerender } = render(
+      <StoreMap
+        clientId="test-client-id"
+        stores={[store]}
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        nearestPlaceId={null}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+        onSelectPlaceId={() => {}}
+        onBoundsChange={() => {}}
+        selectedPlaceId={null}
+      />,
+    );
+
+    await waitFor(() => expect(markerConstructor).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <StoreMap
+        clientId="test-client-id"
+        stores={[{ ...store }]}
+        currentLocation={null}
+        locationError=""
+        locationLoading={false}
+        nearestPlaceId={null}
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+        onSelectPlaceId={() => {}}
+        onBoundsChange={() => {}}
+        selectedPlaceId={null}
+      />,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mapConstructor).toHaveBeenCalledTimes(1);
+    expect(markerConstructor).toHaveBeenCalledTimes(1);
+    expect(markerInstances[0]?.setMap).not.toHaveBeenCalled();
+
+    rerender(
+      <StoreMap
+        clientId="test-client-id"
+        stores={[{ ...store }]}
+        currentLocation={{ lat: 37.5262, lng: 127.0492 }}
+        locationError=""
+        locationLoading={false}
+        nearestPlaceId="stable-store"
+        onRequestCurrentLocation={() => {}}
+        onMoveToCurrentLocation={() => {}}
+        onSelectPlaceId={() => {}}
+        onBoundsChange={() => {}}
+        selectedPlaceId={null}
+      />,
+    );
+
+    await waitFor(() => expect(markerConstructor).toHaveBeenCalledTimes(2));
+
+    expect(mapConstructor).toHaveBeenCalledTimes(1);
+    expect(markerInstances[0]?.setMap).not.toHaveBeenCalled();
   });
 
   it('shows the selected point summary in the live map sidebar', async () => {

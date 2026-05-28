@@ -1,26 +1,17 @@
-'use client';
-
 import {
   getDisplayStatus,
   getFeeLabel,
   getSourceTypeLabel,
-  getStoreByIdFromStores,
   getVisibilityNote,
 } from '../../lib/repo/corkage-repo';
-import { useCanonicalStores } from '../../lib/repo/use-canonical-stores';
+import type { CorkageStore } from '../../lib/types/corkage';
 import { TrustBadge } from './TrustBadge';
 
 type StoreDetailViewProps = {
-  placeId: string;
+  store: CorkageStore;
 };
 
-export function StoreDetailView({ placeId }: StoreDetailViewProps) {
-  const stores = useCanonicalStores();
-  const store = getStoreByIdFromStores(stores, placeId);
-
-  if (!store) {
-    return null;
-  }
+export function StoreDetailView({ store }: StoreDetailViewProps) {
 
   return (
     <section>
