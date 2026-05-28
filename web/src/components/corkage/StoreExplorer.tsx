@@ -80,12 +80,17 @@ export function StoreExplorer({
   const hydratedRef = useRef(false);
 
   const maxFee = Number(maxFeeInput);
-  const districts = listDistrictsFromStores(stores);
-  const baseFilteredStores = filterStoreList(stores, {
-    status: status as StoreFilterStatus,
-    district,
-    maxFee: Number.isFinite(maxFee) && maxFee > 0 ? maxFee : undefined,
-  });
+  const effectiveMaxFee = Number.isFinite(maxFee) && maxFee > 0 ? maxFee : undefined;
+  const districts = useMemo(() => listDistrictsFromStores(stores), [stores]);
+  const baseFilteredStores = useMemo(
+    () =>
+      filterStoreList(stores, {
+        status: status as StoreFilterStatus,
+        district,
+        maxFee: effectiveMaxFee,
+      }),
+    [district, effectiveMaxFee, status, stores],
+  );
   const storesWithDistance = useMemo(
     () => attachDistanceToStores(baseFilteredStores, currentLocation),
     [baseFilteredStores, currentLocation],

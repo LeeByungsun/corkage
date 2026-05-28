@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StoreExplorer } from './StoreExplorer';
 
 const mockUseCanonicalStores = vi.hoisted(() => vi.fn());
+const storeMapRenderProps = vi.hoisted(() => [] as Array<{ stores: unknown[] }>);
 const replaceMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -30,36 +31,41 @@ vi.mock('./StoreMap', () => ({
     onSelectPlaceId: (placeId: string) => void;
     selectedPlaceId: string | null;
     stores: Array<{ placeId: string; name: string }>;
-  }) => (
-    <div>
-      <button type="button" onClick={props.onRequestCurrentLocation}>
-        현재 위치 가져오기
-      </button>
-      {props.currentLocation ? <p>현재 위치 기준 정렬</p> : null}
-      <button type="button" onClick={() => props.onBoundsChange({ north: 37.53, south: 37.52, east: 127.06, west: 127.04 })}>
-        지도 bounds 좁히기
-      </button>
-      {props.nearestPlaceId ? (
-        <p aria-label="지도 가장 가까운 식당">{props.nearestPlaceId}</p>
-      ) : null}
-      {props.stores.map((store) => (
-        <button
-          key={store.placeId}
-          aria-label={`${store.name} 마커 선택`}
-          aria-pressed={props.selectedPlaceId === store.placeId}
-          onClick={() => props.onSelectPlaceId(store.placeId)}
-          type="button"
-        >
-          {store.name} 선택
+  }) => {
+    storeMapRenderProps.push({ stores: props.stores });
+
+    return (
+      <div>
+        <button type="button" onClick={props.onRequestCurrentLocation}>
+          현재 위치 가져오기
         </button>
-      ))}
-    </div>
-  ),
+        {props.currentLocation ? <p>현재 위치 기준 정렬</p> : null}
+        <button type="button" onClick={() => props.onBoundsChange({ north: 37.53, south: 37.52, east: 127.06, west: 127.04 })}>
+          지도 bounds 좁히기
+        </button>
+        {props.nearestPlaceId ? (
+          <p aria-label="지도 가장 가까운 식당">{props.nearestPlaceId}</p>
+        ) : null}
+        {props.stores.map((store) => (
+          <button
+            key={store.placeId}
+            aria-label={`${store.name} 마커 선택`}
+            aria-pressed={props.selectedPlaceId === store.placeId}
+            onClick={() => props.onSelectPlaceId(store.placeId)}
+            type="button"
+          >
+            {store.name} 선택
+          </button>
+        ))}
+      </div>
+    );
+  },
 }));
 
 describe('StoreExplorer', () => {
   beforeEach(() => {
     replaceMock.mockReset();
+    storeMapRenderProps.length = 0;
     mockUseCanonicalStores.mockReturnValue([
       {
         placeId: 'near-store',
@@ -184,6 +190,17 @@ describe('StoreExplorer', () => {
     expect(screen.getByText('1개 결과')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '가까운 식당' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '먼 식당' })).not.toBeInTheDocument();
+  });
+
+  it('keeps map input stable when only bounds-filtered list state changes', () => {
+    render(<StoreExplorer initialRadius="all" initialSelectedPlaceId="" initialSort="default" status="all" district="all" maxFeeInput="" />);
+
+    const initialMapStores = storeMapRenderProps.at(-1)?.stores;
+
+    fireEvent.click(screen.getByRole('button', { name: '지도 bounds 좁히기' }));
+
+    expect(screen.getByText('1개 결과')).toBeInTheDocument();
+    expect(storeMapRenderProps.at(-1)?.stores).toBe(initialMapStores);
   });
 
   it('writes selected/sort/radius state back to the URL query', async () => {
