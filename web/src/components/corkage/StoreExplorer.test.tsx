@@ -142,15 +142,15 @@ describe('StoreExplorer', () => {
     expect(screen.queryByRole('heading', { name: '가능 식당' })).not.toBeInTheDocument();
   });
 
-  it('shows available and unknown stores for the selected region without the map', () => {
+  it('shows every store for the selected region regardless of corkage status', () => {
     renderStoreExplorer({ district: '강남' });
 
     expect(screen.getByText('강남')).toBeInTheDocument();
-    expect(screen.getByText('2개 식당')).toBeInTheDocument();
+    expect(screen.getByText('4개 식당')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '가능 식당' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '확인중 식당' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '불가 식당' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '오래된 식당' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '불가 식당' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '오래된 식당' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '성수 가능 식당' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
   });

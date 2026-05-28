@@ -27,10 +27,6 @@ export function StoreExplorer({
         : [],
     [district, isRegionSelected, stores],
   );
-  const guestStores = useMemo(
-    () => filterGuestVisibleStores(regionalStores),
-    [regionalStores],
-  );
 
   if (!isRegionSelected) {
     return <StoreRegionGate districts={districts} />;
@@ -42,22 +38,22 @@ export function StoreExplorer({
         <div>
           <p className="eyebrow">선택한 지역</p>
           <h2>{district}</h2>
-          <p>콜키지 가능 또는 확인이 필요한 식당만 먼저 보여드립니다.</p>
+          <p>콜키지 여부와 관계없이 이 지역에 등록된 모든 식당을 보여드립니다.</p>
         </div>
         <a className="secondary-button" href="/store">
           지역 다시 선택
         </a>
       </section>
 
-      <p className="helper-text">{guestStores.length}개 식당</p>
+      <p className="helper-text">{regionalStores.length}개 식당</p>
 
-      {guestStores.length === 0 ? (
+      {regionalStores.length === 0 ? (
         <section className="empty-state">
-          <h2>아직 이 지역에는 공개 가능한 콜키지 정보가 없습니다.</h2>
+          <h2>아직 이 지역에는 등록된 식당 정보가 없습니다.</h2>
           <p>다른 지역을 선택하거나 제보 페이지에서 식당을 알려주세요.</p>
         </section>
       ) : (
-        <StoreList stores={guestStores} />
+        <StoreList stores={regionalStores} />
       )}
     </>
   );
@@ -68,7 +64,7 @@ function StoreRegionGate({ districts }: { districts: string[] }) {
     <section className="region-gate" aria-label="지역 선택">
       <p className="eyebrow">콜키지 식당 찾기</p>
       <h2>어느 지역에서 찾으세요?</h2>
-      <p>지역을 고르면 콜키지 가능 또는 확인중인 식당을 보여드립니다.</p>
+      <p>지역을 고르면 등록된 식당을 콜키지 상태와 함께 보여드립니다.</p>
       <form className="region-gate__form">
         <label>
           <span>지역</span>
@@ -89,14 +85,4 @@ function StoreRegionGate({ districts }: { districts: string[] }) {
       </form>
     </section>
   );
-}
-
-function filterGuestVisibleStores(stores: CorkageStore[]) {
-  return stores.filter((store) => {
-    if (store.freshnessState === 'stale') {
-      return false;
-    }
-
-    return store.corkageStatus === 'available' || store.corkageStatus === 'unknown';
-  });
 }
