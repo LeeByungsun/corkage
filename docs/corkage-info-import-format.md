@@ -23,6 +23,39 @@ CORKAGE_IMPORT_VERIFIED_AT=2026-05-28 npm run db:import:stores -- ../tool/getid/
 `콜키지 가능 (무료)`는 `available + free`, `콜키지 가능 (유료)`는
 `available + 비용 문의 필요`, 태그 미검출은 `unavailable`로 정규화합니다.
 
+### 도로명주소 기반 지역 정규화
+
+도로명주소 import 결과가 `경기도 화성시 동탄구`처럼 구 단위에서 멈춘 경우,
+도로명주소 검색API의 `siNm`, `sggNm`, `emdNm` 값을 기준으로 동 단위 district를
+후속 보정합니다.
+
+기본 실행은 dry-run입니다.
+
+```bash
+cd web
+JUSO_CONFIRM_KEY=발급받은_도로명주소_API_승인키 npm run db:normalize:districts -- --limit=20
+```
+
+DB 반영은 결과를 검토한 뒤 `--apply`를 붙여 실행합니다.
+
+```bash
+cd web
+JUSO_CONFIRM_KEY=발급받은_도로명주소_API_승인키 npm run db:normalize:districts -- --limit=20 --apply
+```
+
+정규화 스크립트는 아래 행을 우선 대상으로 삼습니다.
+
+- 현재 `district`가 읍/면/동으로 끝나지 않는 행
+- 주소에는 `화성시 동탄구`가 있으나 `district`에는 `동탄구`가 빠진 행
+
+반영 시 `district` 외에 아래 추적 필드를 함께 기록합니다.
+
+- `jibun_address`
+- `legal_dong`
+- `juso_adm_cd`
+- `district_source = juso-search-api`
+- `district_normalized_at`
+
 ### 콜키지 사실 정보만 후속 갱신
 
 ```bash

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "qa:store-live-markers": "node scripts/run-store-live-marker-qa.mjs",
     "db:import:stores": "node scripts/import-store-database.mjs",
-    "db:import:corkage": "node scripts/import-corkage-info.mjs"
+    "db:import:corkage": "node scripts/import-corkage-info.mjs",
+    "db:normalize:districts": "node scripts/normalize-store-districts.mjs"
   },
   "dependencies": {
     "next": "14.2.5",
