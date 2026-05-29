@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadNaverMaps } from '../../lib/map/naver-maps-loader';
+import { getStoreRoadAddressLabel } from '../../lib/repo/corkage-repo';
 import type { CorkageStore } from '../../lib/types/corkage';
 
 type StoreLocationMapProps = {
@@ -28,6 +29,7 @@ export function StoreLocationMap({
     () => Number.isFinite(store.lat) && Number.isFinite(store.lng),
     [store.lat, store.lng],
   );
+  const addressLabel = getStoreRoadAddressLabel(store);
 
   useEffect(() => {
     if (!clientId || !hasCoordinates || !mapRef.current) {
@@ -95,7 +97,7 @@ export function StoreLocationMap({
       <div className="detail-map__header">
         <p className="eyebrow">위치</p>
         <h2>방문 위치 확인</h2>
-        <p>{store.roadAddress}</p>
+        <p>{addressLabel}</p>
       </div>
       {errorMessage ? <p className="detail-map__error">{errorMessage}</p> : null}
       <div

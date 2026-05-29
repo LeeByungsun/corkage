@@ -15,8 +15,7 @@ type StorePageProps = {
 export default async function StorePage({ searchParams }: StorePageProps) {
   const district = searchParams?.district || 'all';
   const stores = await readCanonicalStores({
-    status: 'all',
-    district,
+    status: 'available',
   });
   const districts = listCanonicalDistricts();
 
@@ -26,7 +25,7 @@ export default async function StorePage({ searchParams }: StorePageProps) {
         <p className="eyebrow">콜키지 식당 찾기</p>
         <h1>지역별 콜키지 식당</h1>
         <p>
-          지역을 먼저 선택하면 콜키지 여부와 관계없이 등록된 식당을 먼저 보여드립니다.
+          동탄구 지역을 먼저 선택하면 콜키지 가능으로 등록된 매장만 보여드립니다.
         </p>
       </header>
 

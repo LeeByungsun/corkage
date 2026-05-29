@@ -1,7 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { filterStoreList } from '../../lib/repo/corkage-repo';
+import {
+  filterStoreList,
+  getDistrictDisplayLabel,
+  getDistrictOptionLabel,
+  listDistrictsFromStores,
+  normalizeDongtanDistrict,
+} from '../../lib/repo/corkage-repo';
 import type { CorkageStore } from '../../lib/types/corkage';
 import { StoreList } from './StoreList';
 
@@ -16,41 +22,50 @@ export function StoreExplorer({
   districts,
   district,
 }: StoreExplorerProps) {
-  const isRegionSelected = district !== 'all';
+  const normalizedDistrict = normalizeDongtanDistrict(district);
+  const isRegionSelected = normalizedDistrict !== 'all';
+  const availableStores = useMemo(
+    () => filterStoreList(stores, { status: 'available' }),
+    [stores],
+  );
+  const regionOptions = useMemo(
+    () => listAvailableDongtanDistricts(districts, availableStores),
+    [availableStores, districts],
+  );
   const regionalStores = useMemo(
     () =>
       isRegionSelected
-        ? filterStoreList(stores, {
-            status: 'all',
-            district,
+        ? filterStoreList(availableStores, {
+            status: 'available',
+            district: normalizedDistrict,
           })
         : [],
-    [district, isRegionSelected, stores],
+    [availableStores, isRegionSelected, normalizedDistrict],
   );
 
   if (!isRegionSelected) {
-    return <StoreRegionGate districts={districts} />;
+    return <StoreRegionGate districts={regionOptions} />;
   }
 
   return (
     <>
       <section className="guest-result-header" aria-label="선택한 지역 결과">
         <div>
-          <p className="eyebrow">선택한 지역</p>
-          <h2>{district}</h2>
-          <p>콜키지 여부와 관계없이 이 지역에 등록된 모든 식당을 보여드립니다.</p>
+          <p className="eyebrow">선택한 동탄구 지역</p>
+          <h2>{getDistrictDisplayLabel(normalizedDistrict)}</h2>
+          <p>동탄구 안에서 콜키지 가능으로 등록된 매장만 보여드립니다.</p>
         </div>
         <a className="secondary-button" href="/store">
           지역 다시 선택
         </a>
       </section>
 
-      <p className="helper-text">{regionalStores.length}개 식당</p>
+      <p className="helper-text">{regionalStores.length}개 가능 매장</p>
 
       {regionalStores.length === 0 ? (
         <section className="empty-state">
-          <h2>아직 이 지역에는 등록된 식당 정보가 없습니다.</h2>
-          <p>다른 지역을 선택하거나 제보 페이지에서 식당을 알려주세요.</p>
+          <h2>아직 이 지역에는 콜키지 가능 매장이 없습니다.</h2>
+          <p>다른 동탄구 지역을 선택하거나 제보 페이지에서 식당을 알려주세요.</p>
         </section>
       ) : (
         <StoreList stores={regionalStores} />
@@ -62,27 +77,42 @@ export function StoreExplorer({
 function StoreRegionGate({ districts }: { districts: string[] }) {
   return (
     <section className="region-gate" aria-label="지역 선택">
-      <p className="eyebrow">콜키지 식당 찾기</p>
-      <h2>어느 지역에서 찾으세요?</h2>
-      <p>지역을 고르면 등록된 식당을 콜키지 상태와 함께 보여드립니다.</p>
+      <p className="eyebrow">콜키지 가능 매장 찾기</p>
+      <h2>동탄구 어느 동에서 찾으세요?</h2>
+      <p>경기 화성시 동탄구 안에서 콜키지 가능으로 등록된 매장만 보여드립니다.</p>
       <form className="region-gate__form">
         <label>
-          <span>지역</span>
-          <select aria-label="지역" defaultValue="" name="district" required>
+          <span>동탄구 세부 지역</span>
+          <select aria-label="동탄구 세부 지역" defaultValue="" name="district" required>
             <option disabled value="">
-              지역 선택
+              동 선택
             </option>
-            {districts.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
+            <optgroup label="경기 화성시 동탄구">
+              {districts.map((item) => (
+                <option key={item} value={item}>
+                  {getDistrictOptionLabel(item)}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </label>
         <button className="primary-button" type="submit">
-          지역 선택하기
+          가능 매장 보기
         </button>
       </form>
     </section>
+  );
+}
+
+function listAvailableDongtanDistricts(
+  districts: string[],
+  availableStores: CorkageStore[],
+) {
+  const storeDistricts = listDistrictsFromStores(availableStores);
+  const fallbackDistricts = districts.map(normalizeDongtanDistrict);
+  const values = storeDistricts.length > 0 ? storeDistricts : fallbackDistricts;
+
+  return [...new Set(values)].sort((left, right) =>
+    getDistrictOptionLabel(left).localeCompare(getDistrictOptionLabel(right), 'ko'),
   );
 }

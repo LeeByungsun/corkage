@@ -31,6 +31,110 @@ const SOURCE_TYPE_LABELS: Record<CorkageStore['sourceType'], string> = {
   partner_data: '제휴 데이터',
 };
 
+const DONGTAN_DISTRICT_PREFIX = '경기도 화성시 동탄구';
+const HWASEONG_CITY_PREFIX = '경기도 화성시';
+const DONGTAN_LEGAL_DONGS = new Set([
+  '목동',
+  '여울동',
+  '영천동',
+  '오산동',
+  '청계동',
+]);
+
+export function normalizeDongtanDistrict(district: string): string {
+  const normalized = normalizeWhitespace(district);
+
+  if (!normalized) {
+    return normalized;
+  }
+
+  if (
+    normalized === DONGTAN_DISTRICT_PREFIX ||
+    normalized.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)
+  ) {
+    return normalized;
+  }
+
+  const dongOnlyMatch = normalized.match(/^경기도\s+화성시\s+(\S+동)$/);
+  if (dongOnlyMatch && DONGTAN_LEGAL_DONGS.has(dongOnlyMatch[1])) {
+    return `${DONGTAN_DISTRICT_PREFIX} ${dongOnlyMatch[1]}`;
+  }
+
+  return normalized;
+}
+
+export function normalizeDongtanStore(store: CorkageStore): CorkageStore {
+  const normalizedDistrict = normalizeDongtanDistrict(store.district);
+
+  if (normalizedDistrict === store.district) {
+    return store;
+  }
+
+  return {
+    ...store,
+    district: normalizedDistrict,
+  };
+}
+
+export function normalizeDongtanStores(stores: CorkageStore[]): CorkageStore[] {
+  return stores.map(normalizeDongtanStore);
+}
+
+export function getDistrictDisplayLabel(district: string): string {
+  const normalizedDistrict = normalizeDongtanDistrict(district);
+
+  if (normalizedDistrict === DONGTAN_DISTRICT_PREFIX) {
+    return '동탄구 기타';
+  }
+
+  if (normalizedDistrict.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)) {
+    return `동탄구 ${normalizedDistrict.slice(DONGTAN_DISTRICT_PREFIX.length).trim()}`;
+  }
+
+  return normalizedDistrict;
+}
+
+export function getDistrictOptionLabel(district: string): string {
+  const displayLabel = getDistrictDisplayLabel(district);
+
+  return displayLabel.startsWith('동탄구 ')
+    ? displayLabel.slice('동탄구 '.length)
+    : displayLabel;
+}
+
+export function getStoreRoadAddressLabel(store: CorkageStore): string {
+  const roadAddress = normalizeWhitespace(store.roadAddress || store.address);
+  const district = normalizeDongtanDistrict(store.district);
+
+  if (!roadAddress) {
+    return normalizeWhitespace(store.address);
+  }
+
+  if (roadAddress.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)) {
+    return roadAddress;
+  }
+
+  if (roadAddress.startsWith(`${HWASEONG_CITY_PREFIX} `)) {
+    return roadAddress.replace(
+      `${HWASEONG_CITY_PREFIX} `,
+      `${DONGTAN_DISTRICT_PREFIX} `,
+    );
+  }
+
+  if (
+    district === DONGTAN_DISTRICT_PREFIX ||
+    district.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)
+  ) {
+    return `${DONGTAN_DISTRICT_PREFIX} ${roadAddress}`;
+  }
+
+  return roadAddress;
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 export function getAllStores(): CorkageStore[] {
   return corkageSeed;
 }
@@ -136,6 +240,8 @@ export function filterStoreList(
     maxFee,
   }: StoreFilterInput,
 ): CorkageStore[] {
+  const normalizedDistrictFilter = district ? normalizeDongtanDistrict(district) : district;
+
   return stores.filter((store) => {
     if (status === 'stale' && store.freshnessState !== 'stale') {
       return false;
@@ -149,7 +255,11 @@ export function filterStoreList(
       return false;
     }
 
-    if (district && district !== 'all' && store.district !== district) {
+    if (
+      normalizedDistrictFilter &&
+      normalizedDistrictFilter !== 'all' &&
+      normalizeDongtanDistrict(store.district) !== normalizedDistrictFilter
+    ) {
       return false;
     }
 
@@ -193,7 +303,7 @@ export function getStoreByIdFromStores(
 }
 
 export function listDistrictsFromStores(stores: CorkageStore[]): string[] {
-  return [...new Set(stores.map((store) => store.district))].sort();
+  return [...new Set(stores.map((store) => normalizeDongtanDistrict(store.district)))].sort();
 }
 
 export function getDisplayStatus(store: CorkageStore): string {

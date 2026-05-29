@@ -17,14 +17,14 @@ vi.mock('./StoreMap', () => ({
 
 const testStores = [
   {
-    placeId: 'available-gangnam',
-    name: '가능 식당',
-    address: '서울시 강남구 1',
-    roadAddress: '서울시 강남구 1',
-    lat: 37.5252,
-    lng: 127.0482,
+    placeId: 'available-yeongcheon',
+    name: '영천 가능 식당',
+    address: '경기도 화성시 동탄구 영천동 1',
+    roadAddress: '지산1길 1',
+    lat: 37.2052,
+    lng: 127.0982,
     category: '다이닝',
-    district: '강남',
+    district: '경기도 화성시 동탄구 영천동',
     corkageStatus: 'available',
     freshnessState: 'fresh',
     confidenceLabel: 'high',
@@ -34,14 +34,14 @@ const testStores = [
     conditionNote: '와인 1병 가능',
   },
   {
-    placeId: 'unknown-gangnam',
-    name: '확인중 식당',
-    address: '서울시 강남구 2',
-    roadAddress: '서울시 강남구 2',
-    lat: 37.5262,
-    lng: 127.0492,
+    placeId: 'unknown-yeongcheon',
+    name: '영천 확인중 식당',
+    address: '경기도 화성시 동탄구 영천동 2',
+    roadAddress: '지산1길 2',
+    lat: 37.2062,
+    lng: 127.0992,
     category: '비스트로',
-    district: '강남',
+    district: '경기도 화성시 동탄구 영천동',
     corkageStatus: 'unknown',
     freshnessState: 'fresh',
     confidenceLabel: 'low',
@@ -51,14 +51,14 @@ const testStores = [
     conditionNote: '확인 필요',
   },
   {
-    placeId: 'unavailable-gangnam',
-    name: '불가 식당',
-    address: '서울시 강남구 3',
-    roadAddress: '서울시 강남구 3',
-    lat: 37.5272,
-    lng: 127.0502,
+    placeId: 'unavailable-yeongcheon',
+    name: '영천 불가 식당',
+    address: '경기도 화성시 동탄구 영천동 3',
+    roadAddress: '지산1길 3',
+    lat: 37.2072,
+    lng: 127.1002,
     category: '한식',
-    district: '강남',
+    district: '경기도 화성시 동탄구 영천동',
     corkageStatus: 'unavailable',
     freshnessState: 'fresh',
     confidenceLabel: 'high',
@@ -68,31 +68,14 @@ const testStores = [
     conditionNote: '반입 불가',
   },
   {
-    placeId: 'stale-gangnam',
-    name: '오래된 식당',
-    address: '서울시 강남구 4',
-    roadAddress: '서울시 강남구 4',
-    lat: 37.5282,
-    lng: 127.0512,
+    placeId: 'available-osan-without-gu',
+    name: '오산 가능 식당',
+    address: '경기도 화성시 오산동 1089',
+    roadAddress: '동탄역로 160',
+    lat: 37.2082,
+    lng: 127.1012,
     category: '와인바',
-    district: '강남',
-    corkageStatus: 'available',
-    freshnessState: 'stale',
-    confidenceLabel: 'medium',
-    verifiedAt: '2025-01-01',
-    sourceType: 'operator_verified',
-    sourceNote: '오래된 확인',
-    conditionNote: '정보 오래됨',
-  },
-  {
-    placeId: 'available-seongsu',
-    name: '성수 가능 식당',
-    address: '서울시 성수구 1',
-    roadAddress: '서울시 성수구 1',
-    lat: 37.5602,
-    lng: 127.1502,
-    category: '다이닝',
-    district: '성수',
+    district: '경기도 화성시 오산동',
     corkageStatus: 'available',
     freshnessState: 'fresh',
     confidenceLabel: 'medium',
@@ -103,7 +86,10 @@ const testStores = [
   },
 ] as const;
 
-const testDistricts = ['강남', '성수'];
+const testDistricts = [
+  '경기도 화성시 동탄구 영천동',
+  '경기도 화성시 오산동',
+];
 
 function renderStoreExplorer(
   overrides: Partial<ComponentProps<typeof StoreExplorer>> = {},
@@ -127,31 +113,40 @@ describe('StoreExplorer', () => {
     vi.clearAllMocks();
   });
 
-  it('shows only the region gate before a region is selected', () => {
+  it('shows a Dongtan-gu region gate before a region is selected', () => {
     renderStoreExplorer({ district: 'all' });
 
     expect(
-      screen.getByRole('heading', { name: '어느 지역에서 찾으세요?' }),
+      screen.getByRole('heading', { name: '동탄구 어느 동에서 찾으세요?' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('지역')).toBeInTheDocument();
+    expect(screen.getByText(/경기 화성시 동탄구/)).toBeInTheDocument();
+    expect(screen.getByLabelText('동탄구 세부 지역')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '영천동' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '오산동' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: '지역 선택하기' }),
+      screen.getByRole('button', { name: '가능 매장 보기' }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
-    expect(screen.queryByText(/개 결과|개 식당/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '가능 식당' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/개 결과|개 식당|개 가능 매장/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '영천 가능 식당' })).not.toBeInTheDocument();
   });
 
-  it('shows every store for the selected region regardless of corkage status', () => {
-    renderStoreExplorer({ district: '강남' });
+  it('shows only available stores for the selected Dongtan-gu district', () => {
+    renderStoreExplorer({ district: '경기도 화성시 동탄구 영천동' });
 
-    expect(screen.getByText('강남')).toBeInTheDocument();
-    expect(screen.getByText('4개 식당')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '가능 식당' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '확인중 식당' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '불가 식당' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '오래된 식당' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '성수 가능 식당' })).not.toBeInTheDocument();
+    expect(screen.getByText('동탄구 영천동')).toBeInTheDocument();
+    expect(screen.getByText('1개 가능 매장')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '영천 가능 식당' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '영천 확인중 식당' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '영천 불가 식당' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
+  });
+
+  it('folds Hwaseong dong-only districts under Dongtan-gu when filtering', () => {
+    renderStoreExplorer({ district: '경기도 화성시 동탄구 오산동' });
+
+    expect(screen.getByText('동탄구 오산동')).toBeInTheDocument();
+    expect(screen.getByText('1개 가능 매장')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '오산 가능 식당' })).toBeInTheDocument();
   });
 });

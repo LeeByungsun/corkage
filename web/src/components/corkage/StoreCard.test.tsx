@@ -25,6 +25,27 @@ describe('StoreCard', () => {
     expect(screen.getByRole('link', { name: '빈테이블 청담 상세 보기' })).toHaveAttribute('href', '/store/seoul-vin-table');
   });
 
+
+  it('renders a full Dongtan-gu road address when source road address is partial', () => {
+    const store = getStoreById('seoul-vin-table');
+
+    expect(store).toBeDefined();
+
+    render(
+      <StoreCard
+        store={{
+          ...store!,
+          category: '다이닝',
+          district: '경기도 화성시 동탄구 영천동',
+          roadAddress: '지산2길 5',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('동탄구 영천동 · 다이닝')).toBeInTheDocument();
+    expect(screen.getByText('경기도 화성시 동탄구 지산2길 5')).toBeInTheDocument();
+  });
+
   it('renders imported NAVER corkage facility tags and free fee labels', () => {
     const store = getStoreById('seoul-vin-table');
 

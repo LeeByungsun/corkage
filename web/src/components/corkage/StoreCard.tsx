@@ -2,7 +2,9 @@ import Link from 'next/link';
 import {
   getCorkageFacilityLabels,
   getDisplayStatus,
+  getDistrictDisplayLabel,
   getFeeLabel,
+  getStoreRoadAddressLabel,
   getVisibilityNote,
 } from '../../lib/repo/corkage-repo';
 import { getDistanceKmLabel } from '../../lib/map/store-map';
@@ -25,6 +27,8 @@ export function StoreCard({
   store,
 }: StoreCardProps) {
   const feeLabel = getFeeLabel(store);
+  const districtLabel = getDistrictDisplayLabel(store.district);
+  const addressLabel = getStoreRoadAddressLabel(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
   const corkageFacilities = getCorkageFacilityLabels(store);
   const visibilityNote =
@@ -40,7 +44,7 @@ export function StoreCard({
       <div className="card__header">
         <div>
           <p className="eyebrow">
-            {store.district} · {store.category}
+            {districtLabel} · {store.category}
           </p>
           <h2>{store.name}</h2>
         </div>
@@ -58,7 +62,7 @@ export function StoreCard({
         </div>
       </div>
 
-      <p className="card__address">{store.roadAddress}</p>
+      <p className="card__address">{addressLabel}</p>
 
       <TrustBadge
         confidenceLabel={store.confidenceLabel}
