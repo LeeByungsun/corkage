@@ -129,6 +129,14 @@ main {
   margin: 0;
 }
 
+.card__fee-highlight--free {
+  color: #23622f;
+}
+
+.card__fee-highlight--paid {
+  color: #9a3412;
+}
+
 .card__source-summary,
 .card__distance {
   color: var(--muted);

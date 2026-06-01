@@ -74,6 +74,9 @@ describe('StoreCard', () => {
     );
 
     expect(screen.getByText('무료 · 조건 확인 필요')).toBeInTheDocument();
+    expect(screen.getByText('무료 · 조건 확인 필요')).toHaveClass(
+      'card__fee-highlight--free',
+    );
     expect(screen.getAllByText('콜키지 가능 (무료)')).toHaveLength(1);
     expect(screen.queryByLabelText('네이버 편의정보 콜키지 태그')).not.toBeInTheDocument();
     expect(
@@ -99,6 +102,9 @@ describe('StoreCard', () => {
     );
 
     expect(screen.getByText('유료 · 비용 확인 필요')).toBeInTheDocument();
+    expect(screen.getByText('유료 · 비용 확인 필요')).toHaveClass(
+      'card__fee-highlight--paid',
+    );
     expect(screen.getAllByText('콜키지 가능 (유료)')).toHaveLength(1);
   });
 

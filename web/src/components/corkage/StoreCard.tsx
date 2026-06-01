@@ -32,6 +32,12 @@ export function StoreCard({
   const sourceSummary = getStoreCardSourceSummary(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
   const corkageFacilities = getDistinctCorkageFacilityLabels(store);
+  const feeHighlightClassName = [
+    'card__fee-highlight',
+    getFeeHighlightToneClassName(store),
+  ]
+    .filter(Boolean)
+    .join(' ');
   const visibilityNote =
     store.corkageStatus === 'unknown'
       ? '콜키지 정보 확인 필요 · 방문 전 매장 확인 권장'
@@ -74,7 +80,7 @@ export function StoreCard({
         className="card__decision"
         aria-label={`${store.name} 콜키지 방문 판단`}
       >
-        <p className="card__fee-highlight">{feeLabel}</p>
+        <p className={feeHighlightClassName}>{feeLabel}</p>
         <p className="card__condition">{store.conditionNote}</p>
       </section>
 
@@ -123,4 +129,25 @@ export function StoreCard({
       </div>
     </article>
   );
+}
+
+function getFeeHighlightToneClassName(store: CorkageStore): string {
+  if (store.corkageStatus !== 'available') {
+    return '';
+  }
+
+  if (store.feeUnit === 'free') {
+    return 'card__fee-highlight--free';
+  }
+
+  const corkageText = [
+    store.conditionNote,
+    ...(store.rawFacilities ?? []),
+  ].join(' ');
+
+  if (typeof store.corkageFee === 'number' || corkageText.includes('유료')) {
+    return 'card__fee-highlight--paid';
+  }
+
+  return '';
 }

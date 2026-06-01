@@ -68,6 +68,23 @@ const testStores = [
     conditionNote: '반입 불가',
   },
   {
+    placeId: 'unavailable-neung',
+    name: '능동 불가 식당',
+    address: '경기도 화성시 동탄구 능동 10',
+    roadAddress: '능동로 10',
+    lat: 37.2092,
+    lng: 127.1022,
+    category: '한식',
+    district: '경기도 화성시 동탄구 능동',
+    corkageStatus: 'unavailable',
+    freshnessState: 'fresh',
+    confidenceLabel: 'high',
+    verifiedAt: '2026-05-22',
+    sourceType: 'operator_verified',
+    sourceNote: '매장 확인',
+    conditionNote: '반입 불가',
+  },
+  {
     placeId: 'available-osan-without-gu',
     name: '오산 가능 식당',
     address: '경기도 화성시 오산동 1089',
@@ -88,6 +105,7 @@ const testStores = [
 
 const testDistricts = [
   '경기도 화성시 동탄구 영천동',
+  '경기도 화성시 동탄구 능동',
   '경기도 화성시 오산동',
 ];
 
@@ -121,6 +139,7 @@ describe('StoreExplorer', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/경기 화성시 동탄구/)).toBeInTheDocument();
     expect(screen.getByLabelText('동탄구 세부 지역')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '능동' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '영천동' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '오산동' })).toBeInTheDocument();
     expect(

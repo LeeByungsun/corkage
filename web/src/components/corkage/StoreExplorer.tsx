@@ -29,7 +29,7 @@ export function StoreExplorer({
     [stores],
   );
   const regionOptions = useMemo(
-    () => listAvailableDongtanDistricts(districts, availableStores),
+    () => listDongtanDistrictOptions(districts, availableStores),
     [availableStores, districts],
   );
   const regionalStores = useMemo(
@@ -104,15 +104,26 @@ function StoreRegionGate({ districts }: { districts: string[] }) {
   );
 }
 
-function listAvailableDongtanDistricts(
+function listDongtanDistrictOptions(
   districts: string[],
   availableStores: CorkageStore[],
 ) {
-  const storeDistricts = listDistrictsFromStores(availableStores);
-  const fallbackDistricts = districts.map(normalizeDongtanDistrict);
-  const values = storeDistricts.length > 0 ? storeDistricts : fallbackDistricts;
+  const canonicalDistricts = districts
+    .map(normalizeDongtanDistrict)
+    .filter(isDongtanDistrictOption);
+  const fallbackDistricts = listDistrictsFromStores(availableStores).filter(
+    isDongtanDistrictOption,
+  );
+  const values =
+    canonicalDistricts.length > 0 ? canonicalDistricts : fallbackDistricts;
 
   return [...new Set(values)].sort((left, right) =>
     getDistrictOptionLabel(left).localeCompare(getDistrictOptionLabel(right), 'ko'),
   );
+}
+
+function isDongtanDistrictOption(district: string): boolean {
+  const displayLabel = getDistrictDisplayLabel(district);
+
+  return displayLabel === '동탄구 기타' || displayLabel.startsWith('동탄구 ');
 }
