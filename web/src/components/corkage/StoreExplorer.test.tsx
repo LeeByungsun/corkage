@@ -109,6 +109,23 @@ const testDistricts = [
   '경기도 화성시 오산동',
 ];
 
+const currentDongtanDongOptions = [
+  '반송동',
+  '석우동',
+  '능동',
+  '청계동',
+  '영천동',
+  '중동',
+  '여울동',
+  '방교동',
+  '금곡동',
+  '송동',
+  '산척동',
+  '장지동',
+  '목동',
+  '신동',
+];
+
 function renderStoreExplorer(
   overrides: Partial<ComponentProps<typeof StoreExplorer>> = {},
 ) {
@@ -139,9 +156,12 @@ describe('StoreExplorer', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/경기 화성시 동탄구/)).toBeInTheDocument();
     expect(screen.getByLabelText('동탄구 세부 지역')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '능동' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '영천동' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '오산동' })).toBeInTheDocument();
+    for (const dong of currentDongtanDongOptions) {
+      expect(screen.getByRole('option', { name: dong })).toBeInTheDocument();
+    }
+    expect(
+      screen.queryByRole('option', { name: '오산동' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: '가능 매장 보기' }),
     ).toBeInTheDocument();
@@ -161,11 +181,18 @@ describe('StoreExplorer', () => {
     expect(screen.queryByTestId('store-map')).not.toBeInTheDocument();
   });
 
-  it('folds Hwaseong dong-only districts under Dongtan-gu when filtering', () => {
+  it('folds legacy Hwaseong Osan-dong stores under Dongtan-gu Yeoul-dong when filtering', () => {
+    renderStoreExplorer({ district: '경기도 화성시 동탄구 여울동' });
+
+    expect(screen.getByText('동탄구 여울동')).toBeInTheDocument();
+    expect(screen.getByText('1개 가능 매장')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '오산 가능 식당' })).toBeInTheDocument();
+  });
+
+  it('keeps legacy Osan-dong links working as Yeoul-dong', () => {
     renderStoreExplorer({ district: '경기도 화성시 동탄구 오산동' });
 
-    expect(screen.getByText('동탄구 오산동')).toBeInTheDocument();
-    expect(screen.getByText('1개 가능 매장')).toBeInTheDocument();
+    expect(screen.getByText('동탄구 여울동')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '오산 가능 식당' })).toBeInTheDocument();
   });
 });

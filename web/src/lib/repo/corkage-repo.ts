@@ -33,13 +33,35 @@ const SOURCE_TYPE_LABELS: Record<CorkageStore['sourceType'], string> = {
 
 const DONGTAN_DISTRICT_PREFIX = '경기도 화성시 동탄구';
 const HWASEONG_CITY_PREFIX = '경기도 화성시';
-const DONGTAN_LEGAL_DONGS = new Set([
-  '목동',
-  '여울동',
-  '영천동',
-  '오산동',
+const DONGTAN_CURRENT_LEGAL_DONGS = [
+  '반송동',
+  '석우동',
+  '능동',
   '청계동',
+  '영천동',
+  '중동',
+  '여울동',
+  '방교동',
+  '금곡동',
+  '송동',
+  '산척동',
+  '장지동',
+  '목동',
+  '신동',
+] as const;
+const DONGTAN_LEGACY_DONG_ALIASES: Record<string, string> = {
+  오산동: '여울동',
+};
+const DONGTAN_LEGAL_DONGS = new Set([
+  ...DONGTAN_CURRENT_LEGAL_DONGS,
+  ...Object.keys(DONGTAN_LEGACY_DONG_ALIASES),
 ]);
+
+export function listDongtanLegalDistricts(): string[] {
+  return DONGTAN_CURRENT_LEGAL_DONGS.map(
+    (dong) => `${DONGTAN_DISTRICT_PREFIX} ${dong}`,
+  );
+}
 
 export function normalizeDongtanDistrict(district: string): string {
   const normalized = normalizeWhitespace(district);
@@ -48,19 +70,37 @@ export function normalizeDongtanDistrict(district: string): string {
     return normalized;
   }
 
-  if (
-    normalized === DONGTAN_DISTRICT_PREFIX ||
-    normalized.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)
-  ) {
+  if (normalized === DONGTAN_DISTRICT_PREFIX) {
     return normalized;
   }
 
+  if (normalized.startsWith(`${DONGTAN_DISTRICT_PREFIX} `)) {
+    const dong = normalized.slice(DONGTAN_DISTRICT_PREFIX.length).trim();
+    const normalizedDong = normalizeDongtanDong(dong);
+
+    return normalizedDong
+      ? `${DONGTAN_DISTRICT_PREFIX} ${normalizedDong}`
+      : normalized;
+  }
+
   const dongOnlyMatch = normalized.match(/^경기도\s+화성시\s+(\S+동)$/);
-  if (dongOnlyMatch && DONGTAN_LEGAL_DONGS.has(dongOnlyMatch[1])) {
-    return `${DONGTAN_DISTRICT_PREFIX} ${dongOnlyMatch[1]}`;
+  if (dongOnlyMatch) {
+    const normalizedDong = normalizeDongtanDong(dongOnlyMatch[1]);
+
+    if (normalizedDong) {
+      return `${DONGTAN_DISTRICT_PREFIX} ${normalizedDong}`;
+    }
   }
 
   return normalized;
+}
+
+function normalizeDongtanDong(dong: string): string {
+  if (!DONGTAN_LEGAL_DONGS.has(dong)) {
+    return '';
+  }
+
+  return DONGTAN_LEGACY_DONG_ALIASES[dong] ?? dong;
 }
 
 export function normalizeDongtanStore(store: CorkageStore): CorkageStore {

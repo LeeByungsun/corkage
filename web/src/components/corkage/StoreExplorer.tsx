@@ -5,6 +5,7 @@ import {
   filterStoreList,
   getDistrictDisplayLabel,
   getDistrictOptionLabel,
+  listDongtanLegalDistricts,
   listDistrictsFromStores,
   normalizeDongtanDistrict,
 } from '../../lib/repo/corkage-repo';
@@ -114,16 +115,28 @@ function listDongtanDistrictOptions(
   const fallbackDistricts = listDistrictsFromStores(availableStores).filter(
     isDongtanDistrictOption,
   );
-  const values =
-    canonicalDistricts.length > 0 ? canonicalDistricts : fallbackDistricts;
-
-  return [...new Set(values)].sort((left, right) =>
-    getDistrictOptionLabel(left).localeCompare(getDistrictOptionLabel(right), 'ko'),
+  const currentLegalDistricts = listDongtanLegalDistricts();
+  const extraDistricts = [...canonicalDistricts, ...fallbackDistricts].filter(
+    (district) => !currentLegalDistricts.includes(district),
   );
+
+  return [
+    ...sortDistrictOptions(currentLegalDistricts),
+    ...sortDistrictOptions([...new Set(extraDistricts)]),
+  ];
 }
 
 function isDongtanDistrictOption(district: string): boolean {
   const displayLabel = getDistrictDisplayLabel(district);
 
   return displayLabel === '동탄구 기타' || displayLabel.startsWith('동탄구 ');
+}
+
+function sortDistrictOptions(districts: string[]): string[] {
+  return [...districts].sort((left, right) =>
+    getDistrictOptionLabel(left).localeCompare(
+      getDistrictOptionLabel(right),
+      'ko',
+    ),
+  );
 }

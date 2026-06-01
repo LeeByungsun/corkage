@@ -7,7 +7,9 @@ import {
   getFeeLabel,
   getReportById,
   getStoreById,
+  listDongtanLegalDistricts,
   mergeStores,
+  normalizeDongtanDistrict,
   transitionReportReviewState,
   shouldShowFeeDetails,
 } from './corkage-repo';
@@ -22,6 +24,34 @@ describe('corkage-repo', () => {
 
     expect(stores).toHaveLength(1);
     expect(stores[0]?.placeId).toBe('seoul-vin-table');
+  });
+
+  it('lists every current Dongtan-gu legal dong for region selection', () => {
+    expect(listDongtanLegalDistricts()).toEqual([
+      '경기도 화성시 동탄구 반송동',
+      '경기도 화성시 동탄구 석우동',
+      '경기도 화성시 동탄구 능동',
+      '경기도 화성시 동탄구 청계동',
+      '경기도 화성시 동탄구 영천동',
+      '경기도 화성시 동탄구 중동',
+      '경기도 화성시 동탄구 여울동',
+      '경기도 화성시 동탄구 방교동',
+      '경기도 화성시 동탄구 금곡동',
+      '경기도 화성시 동탄구 송동',
+      '경기도 화성시 동탄구 산척동',
+      '경기도 화성시 동탄구 장지동',
+      '경기도 화성시 동탄구 목동',
+      '경기도 화성시 동탄구 신동',
+    ]);
+  });
+
+  it('normalizes legacy Hwaseong Osan-dong addresses to current Dongtan-gu Yeoul-dong', () => {
+    expect(normalizeDongtanDistrict('경기도 화성시 오산동')).toBe(
+      '경기도 화성시 동탄구 여울동',
+    );
+    expect(normalizeDongtanDistrict('경기도 화성시 동탄구 오산동')).toBe(
+      '경기도 화성시 동탄구 여울동',
+    );
   });
 
   it('marks stale data with the user-facing stale status', () => {
