@@ -1,15 +1,15 @@
 import Link from 'next/link';
 import {
-  getCorkageFacilityLabels,
+  getDistinctCorkageFacilityLabels,
   getDisplayStatus,
   getDistrictDisplayLabel,
-  getFeeLabel,
-  getStoreRoadAddressLabel,
+  getStoreCardAddressLabel,
+  getStoreCardSourceSummary,
+  getVisitDecisionFeeLabel,
   getVisibilityNote,
 } from '../../lib/repo/corkage-repo';
 import { getDistanceKmLabel } from '../../lib/map/store-map';
 import type { CorkageStore } from '../../lib/types/corkage';
-import { TrustBadge } from './TrustBadge';
 
 type StoreCardProps = {
   isNearest?: boolean;
@@ -26,28 +26,37 @@ export function StoreCard({
   selected = false,
   store,
 }: StoreCardProps) {
-  const feeLabel = getFeeLabel(store);
+  const feeLabel = getVisitDecisionFeeLabel(store);
   const districtLabel = getDistrictDisplayLabel(store.district);
-  const addressLabel = getStoreRoadAddressLabel(store);
+  const addressLabel = getStoreCardAddressLabel(store);
+  const sourceSummary = getStoreCardSourceSummary(store);
   const distanceLabel = getDistanceKmLabel(store.distanceMeters);
-  const corkageFacilities = getCorkageFacilityLabels(store);
+  const corkageFacilities = getDistinctCorkageFacilityLabels(store);
   const visibilityNote =
     store.corkageStatus === 'unknown'
       ? '콜키지 정보 확인 필요 · 방문 전 매장 확인 권장'
       : getVisibilityNote(store);
-  const cardClassName = ['card', selected ? 'card--selected' : '', isNearest ? 'card--nearest' : '']
+  const cardClassName = [
+    'card',
+    selected ? 'card--selected' : '',
+    isNearest ? 'card--nearest' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <article className={cardClassName}>
-      <div className="card__header">
-        <div>
-          <p className="eyebrow">
-            {districtLabel} · {store.category}
-          </p>
-          <h2>{store.name}</h2>
-        </div>
+    <article className={`${cardClassName} card--visit-decision`}>
+      <div className="card__topline">
+        <p className="eyebrow">
+          {districtLabel} · {store.category}
+        </p>
+        <span className="status-pill status-pill--strong">
+          {getDisplayStatus(store)}
+        </span>
+      </div>
+
+      <div className="card__title-row">
+        <h2>{store.name}</h2>
         <div className="card__badges">
           {selected ? <span className="selection-badge">선택됨</span> : null}
           {isNearest ? (
@@ -58,36 +67,27 @@ export function StoreCard({
               가장 가까움
             </span>
           ) : null}
-          <span className="status-pill">{getDisplayStatus(store)}</span>
         </div>
       </div>
 
+      <section
+        className="card__decision"
+        aria-label={`${store.name} 콜키지 방문 판단`}
+      >
+        <p className="card__fee-highlight">{feeLabel}</p>
+        <p className="card__condition">{store.conditionNote}</p>
+      </section>
+
       <p className="card__address">{addressLabel}</p>
+      <p className="card__source-summary">{sourceSummary}</p>
 
-      <TrustBadge
-        confidenceLabel={store.confidenceLabel}
-        freshnessState={store.freshnessState}
-      />
+      {distanceLabel ? (
+        <p className="card__distance">현재 위치 기준 {distanceLabel}</p>
+      ) : null}
 
-      <dl className="card__meta">
-        <div>
-          <dt>비용</dt>
-          <dd>{feeLabel ?? '비용 공개 전'}</dd>
-        </div>
-        <div>
-          <dt>최신 확인</dt>
-          <dd>{store.verifiedAt}</dd>
-        </div>
-        {distanceLabel ? (
-          <div>
-            <dt>현재 위치 기준</dt>
-            <dd>{distanceLabel}</dd>
-          </div>
-        ) : null}
-      </dl>
-
-      <p className="card__notice">{visibilityNote}</p>
-      <p className="card__condition">{store.conditionNote}</p>
+      {store.corkageStatus !== 'available' ? (
+        <p className="card__notice">{visibilityNote}</p>
+      ) : null}
 
       {corkageFacilities.length > 0 ? (
         <div className="facility-tags" aria-label="네이버 편의정보 콜키지 태그">
@@ -115,7 +115,7 @@ export function StoreCard({
         ) : null}
         <Link
           aria-label={`${store.name} 상세 보기`}
-          className="card__link"
+          className="card__link card__link--primary"
           href={`/store/${store.placeId}`}
         >
           상세 보기

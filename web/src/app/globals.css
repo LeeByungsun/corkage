@@ -85,6 +85,57 @@ main {
   box-shadow: 0 16px 50px rgba(31, 26, 22, 0.05);
 }
 
+.card--visit-decision {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+
+.card__topline,
+.card__title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.card__topline .eyebrow {
+  margin: 0;
+}
+
+.card__title-row h2 {
+  margin: 0;
+}
+
+.status-pill--strong {
+  background: #e8f6e9;
+  color: #23622f;
+  flex: 0 0 auto;
+}
+
+.card__decision {
+  background: #fff7ed;
+  border: 1px solid rgba(123, 63, 0, 0.12);
+  border-radius: 18px;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem;
+}
+
+.card__fee-highlight {
+  color: var(--accent-strong);
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.card__source-summary,
+.card__distance {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 .hero__lead,
 .section-header p,
 .helper-text,
@@ -126,6 +177,12 @@ main {
 .card__link {
   border: 1px solid var(--border);
   background: white;
+}
+
+.card__link.card__link--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .eyebrow {
@@ -555,6 +612,8 @@ main {
 
   .site-header,
   .card__header,
+  .card__topline,
+  .card__title-row,
   .detail-hero {
     flex-direction: column;
   }

@@ -131,6 +131,64 @@ export function getStoreRoadAddressLabel(store: CorkageStore): string {
   return roadAddress;
 }
 
+export function getStoreCardAddressLabel(store: CorkageStore): string {
+  return getStoreRoadAddressLabel(store)
+    .replace(/^경기도\s+화성시\s+동탄구\s+/, '')
+    .trim();
+}
+
+export function getVisitDecisionFeeLabel(store: CorkageStore): string {
+  if (store.corkageStatus === 'unavailable') {
+    return '반입 불가 안내';
+  }
+
+  if (store.corkageStatus === 'unknown') {
+    return '비용 공개 전';
+  }
+
+  if (store.feeUnit === 'free') {
+    return '무료 · 조건 확인 필요';
+  }
+
+  const feeLabel = getFeeLabel(store);
+  if (typeof store.corkageFee === 'number' && feeLabel) {
+    return `${feeLabel} · 조건 확인 필요`;
+  }
+
+  const corkageText = [
+    store.conditionNote,
+    ...getCorkageFacilityLabels(store),
+  ].join(' ');
+
+  if (corkageText.includes('유료')) {
+    return '유료 · 비용 확인 필요';
+  }
+
+  return '비용 확인 필요';
+}
+
+export function getStoreCardSourceSummary(store: CorkageStore): string {
+  const sourceLabel = getSourceTypeLabel(store.sourceType);
+  const baseSummary = `${sourceLabel} · ${store.verifiedAt} 확인`;
+
+  if (
+    store.sourceType === 'public_web_reference' ||
+    store.confidenceLabel === 'low'
+  ) {
+    return `${baseSummary} · 방문 전 조건 확인 권장`;
+  }
+
+  return baseSummary;
+}
+
+export function getDistinctCorkageFacilityLabels(store: CorkageStore): string[] {
+  const conditionNote = normalizeWhitespace(store.conditionNote);
+
+  return getCorkageFacilityLabels(store).filter(
+    (facility) => normalizeWhitespace(facility) !== conditionNote,
+  );
+}
+
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
